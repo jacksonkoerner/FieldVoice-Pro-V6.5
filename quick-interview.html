@@ -59,6 +59,21 @@
         .contractor-work-card { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .contractor-content { transition: max-height 0.3s ease; }
         .contractor-chevron { transition: transform 0.2s ease; }
+        /* Personnel cards - mobile-friendly collapsible layout */
+        .personnel-card { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .personnel-card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .personnel-card.expanded .personnel-card-content {
+            max-height: 500px;
+        }
+        .personnel-card-chevron { transition: transform 0.2s ease; }
+        .personnel-card.expanded .personnel-card-chevron { transform: rotate(180deg); }
+        /* Equipment group headers */
+        .equipment-group { margin-bottom: 0.5rem; }
+        .equipment-group:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -257,32 +272,42 @@
                             <p class="text-xs text-slate-600 mb-3">Select a project to load contractors</p>
                             <a href="project-config.html" class="inline-block px-4 py-2 bg-dot-orange text-white text-sm font-bold uppercase">Setup Project</a>
                         </div>
-                        <!-- Personnel header row -->
-                        <div id="personnel-header" class="hidden bg-dot-navy text-white text-[9px] font-bold uppercase tracking-wider">
-                            <div class="grid grid-cols-7 gap-1 p-2">
-                                <div class="col-span-1">Contractor</div>
-                                <div class="text-center">Supt</div>
-                                <div class="text-center">Frmn</div>
-                                <div class="text-center">Oper</div>
-                                <div class="text-center">Labr</div>
-                                <div class="text-center">Surv</div>
-                                <div class="text-center">Othr</div>
-                            </div>
-                        </div>
-                        <!-- Personnel rows -->
-                        <div id="personnel-list" class="space-y-2">
+                        <!-- Personnel cards (collapsible per contractor) -->
+                        <div id="personnel-list" class="space-y-3">
                             <!-- Rendered by renderPersonnelCards() -->
                         </div>
-                        <!-- Total row -->
-                        <div id="personnel-totals" class="hidden bg-slate-100 border-2 border-slate-300">
-                            <div class="grid grid-cols-7 gap-1 p-2 text-xs font-bold">
-                                <div class="col-span-1 text-slate-600 uppercase">Total</div>
-                                <div id="total-supt" class="text-center text-dot-blue">0</div>
-                                <div id="total-frmn" class="text-center text-dot-blue">0</div>
-                                <div id="total-oper" class="text-center text-dot-blue">0</div>
-                                <div id="total-labr" class="text-center text-dot-blue">0</div>
-                                <div id="total-surv" class="text-center text-dot-blue">0</div>
-                                <div id="total-othr" class="text-center text-dot-blue">0</div>
+                        <!-- Personnel Totals Summary -->
+                        <div id="personnel-totals" class="hidden bg-slate-100 border-2 border-slate-300 p-3">
+                            <p class="text-xs font-bold text-slate-600 uppercase mb-2">Personnel Totals</p>
+                            <div class="grid grid-cols-3 gap-2 text-xs">
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Superintendent</p>
+                                    <p id="total-supt" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Foreman</p>
+                                    <p id="total-frmn" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Operator</p>
+                                    <p id="total-oper" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Laborer</p>
+                                    <p id="total-labr" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Surveyor</p>
+                                    <p id="total-surv" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                                <div class="bg-white p-2 border border-slate-200 text-center">
+                                    <p class="text-slate-500">Other</p>
+                                    <p id="total-othr" class="font-bold text-dot-blue text-lg">0</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-slate-300 flex justify-between items-center">
+                                <span class="text-sm font-bold text-slate-600 uppercase">Grand Total</span>
+                                <span id="total-personnel" class="text-lg font-bold text-dot-blue">0</span>
                             </div>
                         </div>
                     </div>
@@ -323,17 +348,8 @@
                         <button onclick="markAllEquipmentIdle()" id="mark-all-idle-btn" class="hidden w-full p-3 bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-200 transition-colors text-sm font-medium uppercase">
                             <i class="fas fa-moon mr-2"></i>Mark All IDLE
                         </button>
-                        <!-- Equipment header row -->
-                        <div id="equipment-header" class="hidden bg-dot-navy text-white text-[9px] font-bold uppercase tracking-wider">
-                            <div class="grid grid-cols-12 gap-1 p-2">
-                                <div class="col-span-2">Contr</div>
-                                <div class="col-span-5">Type / Model</div>
-                                <div class="col-span-1 text-center">Qty</div>
-                                <div class="col-span-4 text-center">Status</div>
-                            </div>
-                        </div>
                         <!-- Equipment rows grouped by contractor -->
-                        <div id="equipment-list" class="space-y-1">
+                        <div id="equipment-list" class="space-y-3">
                             <!-- Rendered by renderEquipmentCards() -->
                         </div>
                         <!-- Equipment totals -->
@@ -999,19 +1015,16 @@
         function renderPersonnelCards() {
             const container = document.getElementById('personnel-list');
             const warningEl = document.getElementById('no-project-warning-ops');
-            const headerEl = document.getElementById('personnel-header');
             const totalsEl = document.getElementById('personnel-totals');
 
             if (!activeProject || projectContractors.length === 0) {
                 warningEl.classList.remove('hidden');
-                headerEl.classList.add('hidden');
                 totalsEl.classList.add('hidden');
                 container.innerHTML = '';
                 return;
             }
 
             warningEl.classList.add('hidden');
-            headerEl.classList.remove('hidden');
             totalsEl.classList.remove('hidden');
             initializeOperations();
 
@@ -1020,71 +1033,96 @@
                     superintendents: null, foremen: null, operators: null,
                     laborers: null, surveyors: null, others: null
                 };
-                const typeLabel = contractor.type === 'prime' ? 'P' : 'S';
-                const tradeAbbr = getTradeAbbreviation(contractor.trades);
+                const typeLabel = contractor.type === 'prime' ? 'PRIME' : 'SUB';
                 const borderColor = contractor.type === 'prime' ? 'border-l-safety-green' : 'border-l-dot-blue';
+                const headerBg = contractor.type === 'prime' ? 'bg-safety-green/10' : 'bg-dot-blue/10';
+                const titleColor = contractor.type === 'prime' ? 'text-safety-green' : 'text-dot-blue';
+
+                // Check if contractor has any personnel data
+                const hasData = (ops.superintendents > 0) || (ops.foremen > 0) || (ops.operators > 0) ||
+                               (ops.laborers > 0) || (ops.surveyors > 0) || (ops.others > 0);
+                const totalPersonnel = (ops.superintendents || 0) + (ops.foremen || 0) + (ops.operators || 0) +
+                                      (ops.laborers || 0) + (ops.surveyors || 0) + (ops.others || 0);
+                const summaryText = hasData ? `${totalPersonnel} personnel` : 'Tap to add';
 
                 return `
-                    <div class="bg-white border border-slate-200 ${borderColor} border-l-4" data-ops-contractor-id="${contractor.id}">
-                        <div class="grid grid-cols-7 gap-1 p-2 items-center">
-                            <!-- Contractor Info -->
-                            <div class="col-span-1 min-w-0">
-                                <p class="text-[10px] font-bold text-slate-700 truncate" title="${escapeHtml(contractor.name)}">${escapeHtml(contractor.abbreviation)}</p>
-                                <p class="text-[8px] text-slate-400 truncate" title="${escapeHtml(contractor.trades || '')}">${tradeAbbr || typeLabel}</p>
+                    <div class="personnel-card bg-white border-2 ${hasData ? borderColor.replace('border-l-', 'border-') : 'border-slate-200'} ${borderColor} border-l-4" data-ops-contractor-id="${contractor.id}">
+                        <!-- Card Header - Tap to expand -->
+                        <button onclick="togglePersonnelCard('${contractor.id}')" class="w-full p-3 flex items-center gap-3 text-left ${hasData ? headerBg : 'bg-slate-50'}">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg font-bold ${hasData ? titleColor : 'text-slate-600'}">${escapeHtml(contractor.abbreviation)}</span>
+                                    <span class="text-[10px] font-medium text-slate-400 uppercase">${typeLabel}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 truncate">${escapeHtml(contractor.name)}${contractor.trades ? ' • ' + escapeHtml(contractor.trades) : ''}</p>
+                                <p class="text-[10px] ${hasData ? titleColor : 'text-slate-400'} mt-1">${summaryText}</p>
                             </div>
-                            <!-- Superintendents -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-supt-${contractor.id}"
-                                    value="${ops.superintendents || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
-                            </div>
-                            <!-- Foremen -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-frmn-${contractor.id}"
-                                    value="${ops.foremen || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
-                            </div>
-                            <!-- Operators -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-oper-${contractor.id}"
-                                    value="${ops.operators || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
-                            </div>
-                            <!-- Laborers -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-labr-${contractor.id}"
-                                    value="${ops.laborers || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
-                            </div>
-                            <!-- Surveyors -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-surv-${contractor.id}"
-                                    value="${ops.surveyors || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
-                            </div>
-                            <!-- Others -->
-                            <div class="text-center">
-                                <input type="number" min="0" max="99"
-                                    id="ops-othr-${contractor.id}"
-                                    value="${ops.others || ''}"
-                                    onchange="updateOperations('${contractor.id}')"
-                                    class="w-full h-8 text-center text-sm border border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
-                                    placeholder="-">
+                            <i id="personnel-chevron-${contractor.id}" class="fas fa-chevron-down personnel-card-chevron text-slate-400 text-xs"></i>
+                        </button>
+
+                        <!-- Expandable Content -->
+                        <div class="personnel-card-content">
+                            <div class="p-3 border-t border-slate-200 bg-slate-50/50">
+                                <!-- 2-column, 3-row grid for role inputs -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Row 1: Superintendent, Foreman -->
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Superintendent</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-supt-${contractor.id}"
+                                            value="${ops.superintendents || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Foreman</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-frmn-${contractor.id}"
+                                            value="${ops.foremen || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                    <!-- Row 2: Operator, Laborer -->
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Operator</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-oper-${contractor.id}"
+                                            value="${ops.operators || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Laborer</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-labr-${contractor.id}"
+                                            value="${ops.laborers || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                    <!-- Row 3: Surveyor, Other -->
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Surveyor</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-surv-${contractor.id}"
+                                            value="${ops.surveyors || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Other</label>
+                                        <input type="number" min="0" max="99"
+                                            id="ops-othr-${contractor.id}"
+                                            value="${ops.others || ''}"
+                                            onchange="updateOperations('${contractor.id}')"
+                                            class="w-full h-10 text-center text-base font-medium border-2 border-slate-300 focus:border-dot-blue focus:outline-none bg-white"
+                                            placeholder="0">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1092,6 +1130,13 @@
             }).join('');
 
             updatePersonnelTotals();
+        }
+
+        function togglePersonnelCard(contractorId) {
+            const card = document.querySelector(`[data-ops-contractor-id="${contractorId}"]`);
+            if (!card) return;
+
+            card.classList.toggle('expanded');
         }
 
         function updateOperations(contractorId) {
@@ -1114,7 +1159,50 @@
 
             saveReport();
             updatePersonnelTotals();
+            updatePersonnelCardStyle(contractorId);
             updateAllPreviews();
+        }
+
+        function updatePersonnelCardStyle(contractorId) {
+            const ops = report.operations.find(o => o.contractorId === contractorId);
+            const contractor = projectContractors.find(c => c.id === contractorId);
+            if (!ops || !contractor) return;
+
+            const card = document.querySelector(`[data-ops-contractor-id="${contractorId}"]`);
+            if (!card) return;
+
+            const hasData = (ops.superintendents > 0) || (ops.foremen > 0) || (ops.operators > 0) ||
+                           (ops.laborers > 0) || (ops.surveyors > 0) || (ops.others > 0);
+            const totalPersonnel = (ops.superintendents || 0) + (ops.foremen || 0) + (ops.operators || 0) +
+                                  (ops.laborers || 0) + (ops.surveyors || 0) + (ops.others || 0);
+
+            const borderColor = contractor.type === 'prime' ? 'border-safety-green' : 'border-dot-blue';
+            const headerBg = contractor.type === 'prime' ? 'bg-safety-green/10' : 'bg-dot-blue/10';
+            const titleColor = contractor.type === 'prime' ? 'text-safety-green' : 'text-dot-blue';
+
+            // Update card border
+            card.classList.remove('border-slate-200', 'border-safety-green', 'border-dot-blue');
+            card.classList.add(hasData ? borderColor : 'border-slate-200');
+
+            // Update header
+            const header = card.querySelector('button');
+            header.classList.remove('bg-slate-50', 'bg-safety-green/10', 'bg-dot-blue/10');
+            header.classList.add(hasData ? headerBg : 'bg-slate-50');
+
+            // Update abbreviation color
+            const abbr = header.querySelector('span.text-lg');
+            if (abbr) {
+                abbr.classList.remove('text-slate-600', 'text-safety-green', 'text-dot-blue');
+                abbr.classList.add(hasData ? titleColor : 'text-slate-600');
+            }
+
+            // Update summary text
+            const summaryP = header.querySelector('p.text-\\[10px\\]');
+            if (summaryP) {
+                summaryP.textContent = hasData ? `${totalPersonnel} personnel` : 'Tap to add';
+                summaryP.classList.remove('text-slate-400', 'text-safety-green', 'text-dot-blue');
+                summaryP.classList.add(hasData ? titleColor : 'text-slate-400');
+            }
         }
 
         function updatePersonnelTotals() {
@@ -1138,12 +1226,20 @@
                 totals.others += ops.others || 0;
             });
 
+            const grandTotal = totals.superintendents + totals.foremen + totals.operators +
+                              totals.laborers + totals.surveyors + totals.others;
+
             document.getElementById('total-supt').textContent = totals.superintendents || '-';
             document.getElementById('total-frmn').textContent = totals.foremen || '-';
             document.getElementById('total-oper').textContent = totals.operators || '-';
             document.getElementById('total-labr').textContent = totals.laborers || '-';
             document.getElementById('total-surv').textContent = totals.surveyors || '-';
             document.getElementById('total-othr').textContent = totals.others || '-';
+
+            const grandTotalEl = document.getElementById('total-personnel');
+            if (grandTotalEl) {
+                grandTotalEl.textContent = grandTotal || '-';
+            }
         }
 
         function getOperationsPreview() {
@@ -1204,8 +1300,12 @@
                     report.equipment.push({
                         equipmentId: equip.id,
                         contractorId: equip.contractorId,
-                        hoursUtilized: null  // null means IDLE
+                        hoursUtilized: null,  // null means IDLE
+                        quantity: equip.quantity || 1
                     });
+                } else if (existing.quantity === undefined) {
+                    // Migrate existing entries to include quantity
+                    existing.quantity = equip.quantity || 1;
                 }
             });
 
@@ -1219,14 +1319,12 @@
             const container = document.getElementById('equipment-list');
             const warningEl = document.getElementById('no-project-warning-equip');
             const noEquipWarningEl = document.getElementById('no-equipment-warning');
-            const headerEl = document.getElementById('equipment-header');
             const totalsEl = document.getElementById('equipment-totals');
             const markAllBtn = document.getElementById('mark-all-idle-btn');
 
             if (!activeProject) {
                 warningEl.classList.remove('hidden');
                 noEquipWarningEl.classList.add('hidden');
-                headerEl.classList.add('hidden');
                 totalsEl.classList.add('hidden');
                 markAllBtn.classList.add('hidden');
                 container.innerHTML = '';
@@ -1239,7 +1337,6 @@
 
             if (projectEquipment.length === 0) {
                 noEquipWarningEl.classList.remove('hidden');
-                headerEl.classList.add('hidden');
                 totalsEl.classList.add('hidden');
                 markAllBtn.classList.add('hidden');
                 container.innerHTML = '';
@@ -1247,7 +1344,6 @@
             }
 
             noEquipWarningEl.classList.add('hidden');
-            headerEl.classList.remove('hidden');
             totalsEl.classList.remove('hidden');
             markAllBtn.classList.remove('hidden');
             initializeEquipment();
@@ -1285,57 +1381,103 @@
             let html = '';
 
             Object.values(grouped).forEach(group => {
-                if (group.equipment.length === 0) return;
-
                 const contractor = group.contractor;
                 const borderColor = contractor.type === 'prime' ? 'border-l-safety-green' : 'border-l-dot-blue';
-                const bgColor = contractor.type === 'prime' ? 'bg-safety-green/5' : 'bg-dot-blue/5';
+                const headerBg = contractor.type === 'prime' ? 'bg-safety-green/10' : 'bg-dot-blue/10';
+                const titleColor = contractor.type === 'prime' ? 'text-safety-green' : 'text-dot-blue';
 
-                // Contractor header row
+                // Contractor group container
+                html += `<div class="equipment-group border-2 border-slate-200 ${borderColor} border-l-4 overflow-hidden">`;
+
+                // Contractor header
                 html += `
-                    <div class="${bgColor} border border-slate-200 ${borderColor} border-l-4 p-2">
-                        <p class="text-[10px] font-bold text-slate-700 uppercase">${escapeHtml(contractor.abbreviation)} - ${escapeHtml(contractor.name)}</p>
+                    <div class="${headerBg} p-3 border-b border-slate-200">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base font-bold ${titleColor}">${escapeHtml(contractor.abbreviation)}</span>
+                            <span class="text-xs text-slate-500">${escapeHtml(contractor.name)}</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${group.equipment.length} equipment item${group.equipment.length !== 1 ? 's' : ''}</p>
                     </div>
                 `;
 
-                // Equipment rows for this contractor
-                group.equipment.forEach(equip => {
-                    const entry = getEquipmentEntry(equip.id) || { hoursUtilized: null };
-                    const typeModel = equip.model ? `${equip.type} / ${equip.model}` : (equip.type || 'N/A');
-                    const isActive = entry.hoursUtilized !== null && entry.hoursUtilized > 0;
-
+                // Check if contractor has equipment
+                if (group.equipment.length === 0) {
                     html += `
-                        <div class="bg-white border border-slate-200 ${borderColor} border-l-4" data-equip-id="${equip.id}">
-                            <div class="grid grid-cols-12 gap-1 p-2 items-center">
-                                <!-- Contractor Abbreviation -->
-                                <div class="col-span-2">
-                                    <p class="text-[10px] font-bold text-slate-500">${escapeHtml(contractor.abbreviation)}</p>
-                                </div>
-                                <!-- Type / Model -->
-                                <div class="col-span-5 min-w-0">
-                                    <p class="text-[10px] text-slate-700 truncate" title="${escapeHtml(typeModel)}">${escapeHtml(typeModel)}</p>
-                                </div>
-                                <!-- Quantity (always 1) -->
-                                <div class="col-span-1 text-center">
-                                    <p class="text-[10px] font-bold text-slate-600">1</p>
-                                </div>
-                                <!-- Status Picker -->
-                                <div class="col-span-4">
-                                    <select
-                                        id="equip-status-${equip.id}"
-                                        onchange="updateEquipmentStatus('${equip.id}')"
-                                        class="w-full h-8 text-[10px] border ${isActive ? 'border-safety-green bg-safety-green/10' : 'border-slate-300 bg-white'} focus:border-dot-blue focus:outline-none px-1">
-                                        ${statusOptions.replace(`value="${entry.hoursUtilized || ''}"`, `value="${entry.hoursUtilized || ''}" selected`)}
-                                    </select>
-                                </div>
+                        <div class="p-4 text-center bg-slate-50">
+                            <i class="fas fa-truck text-slate-300 text-xl mb-2"></i>
+                            <p class="text-xs text-slate-400">No equipment for this contractor</p>
+                        </div>
+                    `;
+                } else {
+                    // Equipment rows header
+                    html += `
+                        <div class="bg-slate-100 px-3 py-1.5 border-b border-slate-200">
+                            <div class="grid grid-cols-12 gap-2 text-[10px] font-bold text-slate-500 uppercase">
+                                <div class="col-span-6">Type / Model</div>
+                                <div class="col-span-2 text-center">Qty</div>
+                                <div class="col-span-4 text-center">Status</div>
                             </div>
                         </div>
                     `;
-                });
+
+                    // Equipment rows for this contractor
+                    group.equipment.forEach((equip, index) => {
+                        const entry = getEquipmentEntry(equip.id) || { hoursUtilized: null, quantity: equip.quantity || 1 };
+                        const typeModel = equip.model ? `${equip.type} / ${equip.model}` : (equip.type || 'N/A');
+                        const isActive = entry.hoursUtilized !== null && entry.hoursUtilized > 0;
+                        const quantity = entry.quantity || equip.quantity || 1;
+                        const isLast = index === group.equipment.length - 1;
+
+                        html += `
+                            <div class="bg-white px-3 py-2 ${!isLast ? 'border-b border-slate-100' : ''}" data-equip-id="${equip.id}">
+                                <div class="grid grid-cols-12 gap-2 items-center">
+                                    <!-- Type / Model (more space now) -->
+                                    <div class="col-span-6 min-w-0">
+                                        <p class="text-sm text-slate-700 leading-tight" title="${escapeHtml(typeModel)}">${escapeHtml(typeModel)}</p>
+                                    </div>
+                                    <!-- Quantity input -->
+                                    <div class="col-span-2">
+                                        <input type="number" min="1" max="99"
+                                            id="equip-qty-${equip.id}"
+                                            value="${quantity}"
+                                            onchange="updateEquipmentQuantity('${equip.id}')"
+                                            class="w-full h-8 text-center text-sm font-medium border border-slate-300 focus:border-dot-blue focus:outline-none bg-white">
+                                    </div>
+                                    <!-- Status Picker -->
+                                    <div class="col-span-4">
+                                        <select
+                                            id="equip-status-${equip.id}"
+                                            onchange="updateEquipmentStatus('${equip.id}')"
+                                            class="w-full h-8 text-xs border ${isActive ? 'border-safety-green bg-safety-green/10 font-medium' : 'border-slate-300 bg-white'} focus:border-dot-blue focus:outline-none px-1">
+                                            ${statusOptions.replace(`value="${entry.hoursUtilized || ''}"`, `value="${entry.hoursUtilized || ''}" selected`)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`; // Close equipment-group
             });
 
             container.innerHTML = html;
             updateEquipmentTotals();
+        }
+
+        function updateEquipmentQuantity(equipmentId) {
+            const entry = report.equipment.find(e => e.equipmentId === equipmentId);
+            if (!entry) return;
+
+            const input = document.getElementById(`equip-qty-${equipmentId}`);
+            if (!input) return;
+
+            const val = parseInt(input.value);
+            entry.quantity = isNaN(val) || val < 1 ? 1 : val;
+
+            saveReport();
+            updateEquipmentTotals();
+            updateAllPreviews();
         }
 
         function updateEquipmentStatus(equipmentId) {
@@ -1350,7 +1492,7 @@
 
             // Update visual style
             const isActive = entry.hoursUtilized !== null && entry.hoursUtilized > 0;
-            select.className = `w-full h-8 text-[10px] border ${isActive ? 'border-safety-green bg-safety-green/10' : 'border-slate-300 bg-white'} focus:border-dot-blue focus:outline-none px-1`;
+            select.className = `w-full h-8 text-xs border ${isActive ? 'border-safety-green bg-safety-green/10 font-medium' : 'border-slate-300 bg-white'} focus:border-dot-blue focus:outline-none px-1`;
 
             saveReport();
             updateEquipmentTotals();
