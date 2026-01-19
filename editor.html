@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Quick Edit - FieldVoice Pro</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+    <meta name="theme-color" content="#0a1628">
+
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FieldVoice">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        @keyframes pulse-recording {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.5); opacity: 0; }
+        }
+        .recording-pulse::before {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse-recording 1.5s ease-out infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    <div id="app" class="max-w-2xl mx-auto min-h-screen flex flex-col">
+
+        <!-- HEADER -->
+        <header class="sticky top-0 z-10 bg-white border-b shadow-sm">
+            <div class="flex items-center gap-4 p-4">
+                <a href="index.html" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+                    <i class="fas fa-arrow-left text-slate-400"></i>
+                </a>
+                <h1 id="sectionTitle" class="text-lg font-black text-slate-800 flex-1"></h1>
+                <a href="report.html" class="text-sm font-bold text-indigo-600 hover:text-indigo-700">
+                    View Report
+                </a>
+            </div>
+        </header>
+
+        <!-- SECTION TABS -->
+        <div class="bg-white border-b px-4 py-2 overflow-x-auto">
+            <div id="sectionTabs" class="flex gap-2 min-w-max">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 overflow-y-auto p-4 pb-40">
+            <div id="contentArea" class="space-y-4">
+                <!-- Dynamic content based on section -->
+            </div>
+        </main>
+
+        <!-- VOICE INPUT HINT BAR -->
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
+            <div class="max-w-2xl mx-auto">
+                <div class="flex items-center gap-3 bg-white border border-slate-200 p-2 pl-5 rounded-full shadow-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-indigo-600 uppercase tracking-widest">Voice Input</p>
+                        <p class="text-sm text-slate-400 truncate">Use keyboard microphone to dictate</p>
+                    </div>
+                    <button onclick="showDictationHint()" class="relative w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-white text-xl shadow-lg transition-all active:scale-90">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ CONFIG ============
+        const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
+
+        const SECTIONS = {
+            photos: { title: 'Progress Photos', icon: 'fa-camera', color: 'indigo' },
+            activities: { title: 'Work Summary', icon: 'fa-tasks', color: 'emerald' },
+            operations: { title: 'Headcounts', icon: 'fa-users', color: 'blue' },
+            equipment: { title: 'Equipment', icon: 'fa-truck-pickup', color: 'amber' },
+            issues: { title: 'Issues & Delays', icon: 'fa-exclamation-triangle', color: 'red' },
+            qaqc: { title: 'Inspections', icon: 'fa-check-double', color: 'purple' },
+            safety: { title: 'Safety', icon: 'fa-hard-hat', color: 'orange' }
+        };
+
+        // ============ STATE ============
+        let currentSection = 'photos';
+
+        // ============ DICTATION HINT ============
+        function showDictationHint() {
+            alert('To dictate text:\n\n1. Tap a text input field\n2. Tap the microphone button on your keyboard\n3. Speak your notes\n\nThe app uses your device\'s native keyboard dictation.');
+        }
+
+        // ============ STORAGE ============
+        function getTodayKey() {
+            return `fieldvoice_report_${new Date().toISOString().split('T')[0]}`;
+        }
+
+        function getReport() {
+            const saved = localStorage.getItem(getTodayKey());
+            if (saved) {
+                try { return JSON.parse(saved); } catch (e) {}
+            }
+            const legacy = localStorage.getItem('fieldvoice_report');
+            if (legacy) {
+                try { return JSON.parse(legacy); } catch (e) {}
+            }
+            return createFreshReport();
+        }
+
+        function createFreshReport() {
+            return {
+                meta: { createdAt: new Date().toISOString(), version: 2 },
+                overview: {
+                    projectName: "",
+                    date: new Date().toLocaleDateString(),
+                    weather: { generalCondition: '--', jobSiteCondition: 'Dry' }
+                },
+                contractors: [],
+                activities: [],
+                operations: [],
+                equipment: [],
+                generalIssues: [],
+                qaqcNotes: [],
+                safety: { hasIncidents: false, notes: [] },
+                visitorsRemarks: [],
+                photos: []
+            };
+        }
+
+        function saveReport(report) {
+            localStorage.setItem(getTodayKey(), JSON.stringify(report));
+            localStorage.setItem('fieldvoice_report', JSON.stringify(report));
+        }
+
+        // ============ RENDER ============
+        function renderTabs() {
+            const tabs = document.getElementById('sectionTabs');
+            tabs.innerHTML = Object.entries(SECTIONS).map(([id, cfg]) => `
+                <button onclick="switchSection('${id}')" class="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                    currentSection === id
+                        ? `bg-${cfg.color}-100 text-${cfg.color}-700`
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }">
+                    <i class="fas ${cfg.icon}"></i>
+                    <span class="hidden sm:inline">${cfg.title}</span>
+                </button>
+            `).join('');
+        }
+
+        function renderContent() {
+            const report = getReport();
+            const content = document.getElementById('contentArea');
+            document.getElementById('sectionTitle').textContent = SECTIONS[currentSection].title;
+
+            switch (currentSection) {
+                case 'photos':
+                    renderPhotos(content, report);
+                    break;
+                case 'activities':
+                    renderActivities(content, report);
+                    break;
+                case 'operations':
+                    renderOperations(content, report);
+                    break;
+                case 'equipment':
+                    renderEquipment(content, report);
+                    break;
+                case 'issues':
+                    renderIssues(content, report);
+                    break;
+                case 'qaqc':
+                    renderQAQC(content, report);
+                    break;
+                case 'safety':
+                    renderSafety(content, report);
+                    break;
+            }
+        }
+
+        function renderPhotos(container, report) {
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl border border-slate-200 p-4">
+                    <label class="block cursor-pointer">
+                        <input type="file" accept="image/*" capture="environment" multiple class="hidden" id="photoInput">
+                        <div class="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:border-indigo-300 hover:bg-indigo-50/50 transition-colors">
+                            <i class="fas fa-camera text-3xl text-slate-300 mb-2"></i>
+                            <p class="font-bold text-slate-600">Tap to add photos</p>
+                            <p class="text-xs text-slate-400 mt-1">GPS and timestamp will be captured</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    ${report.photos.map((p, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                            <img src="${p.url}" class="w-full aspect-square object-cover">
+                            <div class="p-3">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-[10px] font-bold text-slate-400">${p.time || p.date}</span>
+                                    <button onclick="deletePhoto(${idx})" class="text-red-400 hover:text-red-600">
+                                        <i class="fas fa-trash text-xs"></i>
+                                    </button>
+                                </div>
+                                <textarea
+                                    class="w-full p-2 bg-slate-50 border border-slate-100 rounded-lg text-sm resize-none focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    rows="2"
+                                    placeholder="Add caption..."
+                                    data-photo-idx="${idx}"
+                                >${p.caption || ''}</textarea>
+                                ${p.gps ? `<p class="text-[9px] text-slate-400 mt-1"><i class="fas fa-map-marker-alt mr-1"></i>${p.gps.lat.toFixed(4)}, ${p.gps.lng.toFixed(4)}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('') || '<p class="col-span-2 text-center text-slate-400 py-8">No photos yet</p>'}
+                </div>
+            `;
+
+            // Photo input handler
+            document.getElementById('photoInput').addEventListener('change', handlePhotoInput);
+
+            // Caption handlers
+            container.querySelectorAll('textarea[data-photo-idx]').forEach(ta => {
+                ta.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.photoIdx);
+                    const report = getReport();
+                    if (report.photos[idx]) {
+                        report.photos[idx].caption = e.target.value;
+                        saveReport(report);
+                    }
+                });
+            });
+        }
+
+        function renderActivities(container, report) {
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${report.activities.map((act, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="font-bold text-emerald-700 uppercase text-sm">${act.contractor}</span>
+                                <button onclick="deleteActivity(${idx})" class="text-red-400 hover:text-red-600 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <textarea
+                                class="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm resize-none focus:ring-2 focus:ring-emerald-500 outline-none"
+                                rows="4"
+                                data-activity-idx="${idx}"
+                            >${act.narrative || ''}</textarea>
+                        </div>
+                    `).join('') || `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                            <i class="fas fa-tasks text-3xl text-slate-200 mb-2"></i>
+                            <p class="text-slate-400">No work summaries yet</p>
+                            <p class="text-xs text-slate-300 mt-1">Use voice to add contractor activities</p>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            container.querySelectorAll('textarea[data-activity-idx]').forEach(ta => {
+                ta.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.activityIdx);
+                    const report = getReport();
+                    if (report.activities[idx]) {
+                        report.activities[idx].narrative = e.target.value;
+                        saveReport(report);
+                    }
+                });
+            });
+        }
+
+        function renderOperations(container, report) {
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="p-3 text-left font-bold text-slate-600">Contractor</th>
+                                <th class="p-3 text-center font-bold text-slate-600 w-12">Sup</th>
+                                <th class="p-3 text-center font-bold text-slate-600 w-12">Fm</th>
+                                <th class="p-3 text-center font-bold text-slate-600 w-12">Op</th>
+                                <th class="p-3 text-center font-bold text-slate-600 w-12">Lab</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${report.operations.map((row, idx) => `
+                                <tr>
+                                    <td class="p-3 font-medium">${row.contractor}</td>
+                                    <td class="p-2"><input type="number" class="w-full p-1 bg-slate-50 rounded text-center" value="${row.supers || ''}" data-op-idx="${idx}" data-field="supers"></td>
+                                    <td class="p-2"><input type="number" class="w-full p-1 bg-slate-50 rounded text-center" value="${row.foreman || ''}" data-op-idx="${idx}" data-field="foreman"></td>
+                                    <td class="p-2"><input type="number" class="w-full p-1 bg-slate-50 rounded text-center" value="${row.operators || ''}" data-op-idx="${idx}" data-field="operators"></td>
+                                    <td class="p-2"><input type="number" class="w-full p-1 bg-slate-50 rounded text-center" value="${row.laborers || ''}" data-op-idx="${idx}" data-field="laborers"></td>
+                                </tr>
+                            `).join('') || `
+                                <tr>
+                                    <td colspan="5" class="p-8 text-center text-slate-400">No headcounts recorded</td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            container.querySelectorAll('input[data-op-idx]').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.opIdx);
+                    const field = e.target.dataset.field;
+                    const report = getReport();
+                    if (report.operations[idx]) {
+                        report.operations[idx][field] = parseInt(e.target.value) || 0;
+                        saveReport(report);
+                    }
+                });
+            });
+        }
+
+        function renderEquipment(container, report) {
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${report.equipment.map((eq, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4">
+                            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                                <i class="fas fa-truck-pickup text-amber-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-slate-800">${eq.model}</p>
+                                <p class="text-xs text-slate-400">${eq.contractor} · Qty: ${eq.quantity}</p>
+                            </div>
+                            <button onclick="deleteEquipment(${idx})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('') || `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                            <i class="fas fa-truck-pickup text-3xl text-slate-200 mb-2"></i>
+                            <p class="text-slate-400">No equipment recorded</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderIssues(container, report) {
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${report.generalIssues.map((issue, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-start gap-3">
+                            <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-red-500 text-sm"></i>
+                            </div>
+                            <p class="flex-1 text-sm text-slate-700">${issue}</p>
+                            <button onclick="deleteIssue(${idx})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    `).join('') || `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                            <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                                <i class="fas fa-check text-emerald-500"></i>
+                            </div>
+                            <p class="text-slate-400">No issues reported</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderQAQC(container, report) {
+            container.innerHTML = `
+                <div class="space-y-3">
+                    ${report.qaqcNotes.map((note, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-start gap-3">
+                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-check-double text-purple-500 text-sm"></i>
+                            </div>
+                            <p class="flex-1 text-sm text-slate-700">${note}</p>
+                            <button onclick="deleteQAQC(${idx})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    `).join('') || `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center">
+                            <i class="fas fa-check-double text-3xl text-slate-200 mb-2"></i>
+                            <p class="text-slate-400">No inspections recorded</p>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderSafety(container, report) {
+            const safety = report.safety || { hasIncidents: false, notes: [] };
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="hasIncidents" ${safety.hasIncidents ? 'checked' : ''} class="w-5 h-5 rounded text-red-600 focus:ring-red-500">
+                        <span class="font-bold text-slate-700">Incidents Reported</span>
+                    </label>
+                </div>
+                <div class="space-y-3">
+                    ${safety.notes.map((note, idx) => `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-start gap-3">
+                            <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-hard-hat text-orange-500 text-sm"></i>
+                            </div>
+                            <p class="flex-1 text-sm text-slate-700">${note}</p>
+                            <button onclick="deleteSafetyNote(${idx})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    `).join('') || `
+                        <div class="bg-emerald-50 rounded-2xl border border-emerald-200 p-4 text-center">
+                            <i class="fas fa-shield-alt text-emerald-500 text-2xl mb-2"></i>
+                            <p class="text-emerald-700 font-bold">All Clear</p>
+                            <p class="text-xs text-emerald-600">No safety concerns noted</p>
+                        </div>
+                    `}
+                </div>
+            `;
+
+            document.getElementById('hasIncidents').addEventListener('change', (e) => {
+                const report = getReport();
+                report.safety.hasIncidents = e.target.checked;
+                saveReport(report);
+            });
+        }
+
+        // ============ ACTIONS ============
+        function switchSection(sectionId) {
+            currentSection = sectionId;
+            renderTabs();
+            renderContent();
+        }
+
+        async function handlePhotoInput(e) {
+            const files = e.target.files;
+            if (!files) return;
+
+            const report = getReport();
+
+            for (const file of files) {
+                // Get GPS
+                let gps = null;
+                try {
+                    const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 }));
+                    gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                } catch (e) {}
+
+                // Read file
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    report.photos.push({
+                        id: `photo_${Date.now()}`,
+                        url: ev.target.result,
+                        caption: '',
+                        timestamp: new Date().toISOString(),
+                        date: new Date().toLocaleDateString(),
+                        time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                        gps: gps
+                    });
+                    saveReport(report);
+                    renderContent();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function deletePhoto(idx) {
+            if (!confirm('Delete this photo?')) return;
+            const report = getReport();
+            report.photos.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+        function deleteActivity(idx) {
+            if (!confirm('Delete this activity?')) return;
+            const report = getReport();
+            report.activities.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+        function deleteEquipment(idx) {
+            const report = getReport();
+            report.equipment.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+        function deleteIssue(idx) {
+            const report = getReport();
+            report.generalIssues.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+        function deleteQAQC(idx) {
+            const report = getReport();
+            report.qaqcNotes.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+        function deleteSafetyNote(idx) {
+            const report = getReport();
+            report.safety.notes.splice(idx, 1);
+            saveReport(report);
+            renderContent();
+        }
+
+
+        function extractContractor(text) {
+            // Check if text mentions any known contractors from the report
+            const report = getReport();
+            const lower = text.toLowerCase();
+
+            // Check against contractors already recorded in the report
+            for (const contractor of (report.contractors || [])) {
+                if (lower.includes(contractor.toLowerCase())) {
+                    return contractor;
+                }
+            }
+            return null;
+        }
+
+        function getDefaultContractor(report) {
+            // Use first contractor from today's report or empty string
+            return report.contractors?.[0] || '';
+        }
+
+        function parseHeadcount(text) {
+            const counts = { supers: 0, foreman: 0, operators: 0, laborers: 0, others: 0 };
+            const lower = text.toLowerCase();
+
+            // Try to extract numbers with keywords
+            const patterns = [
+                { regex: /(\d+)\s*(?:super|superintendent)/i, field: 'supers' },
+                { regex: /(\d+)\s*(?:foreman|foremen)/i, field: 'foreman' },
+                { regex: /(\d+)\s*(?:operator|operators)/i, field: 'operators' },
+                { regex: /(\d+)\s*(?:laborer|laborers|workers)/i, field: 'laborers' }
+            ];
+
+            for (const p of patterns) {
+                const match = text.match(p.regex);
+                if (match) counts[p.field] = parseInt(match[1]) || 0;
+            }
+
+            // If no specific breakdown, try to get total
+            if (Object.values(counts).every(v => v === 0)) {
+                const numMatch = text.match(/(\d+)/);
+                if (numMatch) counts.laborers = parseInt(numMatch[1]) || 0;
+            }
+
+            return counts;
+        }
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification fixed top-20 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg z-50';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            currentSection = params.get('section') || 'photos';
+            if (!SECTIONS[currentSection]) currentSection = 'photos';
+
+            renderTabs();
+            renderContent();
+        });
+    </script>
+
+    <!-- PWA Navigation Fix - Prevent Safari from breaking out of standalone mode -->
+    <script>
+        (function() {
+            // Only apply fix when running as installed PWA
+            if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+                document.addEventListener('click', function(e) {
+                    const link = e.target.closest('a');
+                    if (link && link.href && link.href.startsWith(window.location.origin)) {
+                        // Internal link - prevent default and use location.href
+                        e.preventDefault();
+                        window.location.href = link.href;
+                    }
+                }, true);
+            }
+        })();
+    </script>
+
+    <!-- PWA Service Worker Registration & Offline Banner -->
+    <div id="offline-banner" class="fixed top-0 left-0 right-0 bg-yellow-500 text-yellow-900 text-center py-2 px-4 font-bold text-sm z-[9999] transform -translate-y-full transition-transform duration-300" style="display: none;">
+        <i class="fas fa-wifi-slash mr-2"></i>You are offline - Some features may be unavailable
+    </div>
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('[PWA] Service Worker registered:', registration.scope);
+
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('[PWA] New version available');
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('[PWA] Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // Offline/Online Event Handlers
+        const offlineBanner = document.getElementById('offline-banner');
+
+        function showOfflineBanner() {
+            if (offlineBanner) {
+                offlineBanner.style.display = 'block';
+                setTimeout(() => {
+                    offlineBanner.style.transform = 'translateY(0)';
+                }, 10);
+            }
+        }
+
+        function hideOfflineBanner() {
+            if (offlineBanner) {
+                offlineBanner.style.transform = 'translateY(-100%)';
+                setTimeout(() => {
+                    offlineBanner.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        window.addEventListener('online', hideOfflineBanner);
+        window.addEventListener('offline', showOfflineBanner);
+
+        // Check initial state
+        if (!navigator.onLine) {
+            showOfflineBanner();
+        }
+    </script>
+</body>
+</html>

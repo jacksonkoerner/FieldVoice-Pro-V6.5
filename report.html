@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Daily Report - FieldVoice Pro</title>
+
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+    <meta name="theme-color" content="#0a1628">
+
+    <!-- iOS PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FieldVoice">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        @media print {
+            .print-hidden { display: none !important; }
+            .page-break { page-break-before: always; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; }
+            @page { margin: 0.5in; }
+            .report-page { max-width: 8.5in; min-height: 11in; }
+        }
+        @media screen {
+            .report-page { max-width: 100%; }
+        }
+        @media screen and (min-width: 768px) {
+            .report-page { max-width: 8.5in; min-height: auto; }
+        }
+        .table-scroll-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 0 4px;
+        }
+        .table-scroll-wrapper table {
+            min-width: 600px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen overflow-x-hidden">
+
+    <!-- NAVIGATION BAR (hidden on print) -->
+    <div class="print-hidden sticky top-0 z-50 bg-white border-b shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="w-9 h-9 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors" title="Home">
+                    <i class="fas fa-home text-slate-600"></i>
+                </a>
+                <a href="review.html" class="flex items-center gap-2 text-slate-600 font-bold hover:text-slate-800 transition-colors">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="hidden sm:inline">Back to AI Kit</span>
+                </a>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="submit-report-btn" onclick="showSubmitConfirmation()" class="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md hover:bg-orange-700 transition-colors">
+                    <i class="fas fa-cloud-upload-alt mr-1"></i> Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Confirmation Modal -->
+    <div id="submit-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 print-hidden">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-cloud-upload-alt text-orange-600 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800">Submit Report</h3>
+                    <p class="text-sm text-slate-500">This action cannot be undone</p>
+                </div>
+            </div>
+            <p class="text-slate-600 mb-6">Are you sure you want to submit this report? This will save it to the project database.</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="hideSubmitConfirmation()" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-200 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-submit-btn" onclick="submitReport()" class="px-4 py-2 bg-orange-600 text-white rounded-lg font-bold text-sm shadow-md hover:bg-orange-700 transition-colors">
+                    <i class="fas fa-cloud-upload-alt mr-1"></i> Submit Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 print-hidden"></div>
+
+    <div class="max-w-4xl mx-auto p-4 sm:p-8 print:p-0 print:max-w-none">
+
+        <!-- PAGE 1: OVERVIEW & WORK SUMMARY -->
+        <div id="page1" class="report-page bg-white border-4 border-slate-900 p-1 mb-8 print:mb-0 print:border-2">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 border-b-2 border-slate-900 pb-2 mb-4 px-2">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 bg-slate-200 flex items-center justify-center text-[7px] sm:text-[8px] font-bold rounded flex-shrink-0">LOGO</div>
+                    <div>
+                        <h1 class="text-base sm:text-xl font-black uppercase tracking-tighter">RPR Daily Report</h1>
+                        <p class="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase">Resident Project Representative</p>
+                    </div>
+                </div>
+                <div class="text-[10px] sm:text-xs font-bold text-left sm:text-right">
+                    <div id="reportDate" class="text-slate-600"></div>
+                    <div>Page 1 of <span id="totalPages">2</span></div>
+                </div>
+            </div>
+
+            <!-- Project Overview Section -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                Project Overview
+            </div>
+            <div id="overviewGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-0 border border-slate-900 text-[10px] mx-1 mb-4 overflow-hidden">
+                <!-- Filled by JS -->
+            </div>
+
+            <!-- Daily Work Summary Section -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                Daily Work Summary
+            </div>
+            <div id="workSummary" class="text-[10px] px-3 py-2 space-y-4 min-h-[350px]">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+
+        <!-- PAGE 2: ISSUES, QA/QC, SAFETY -->
+        <div id="page2" class="report-page bg-white border-4 border-slate-900 p-1 mb-8 print:mb-0 print:border-2 page-break">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 border-b-2 border-slate-900 pb-2 mb-4 px-2">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 bg-slate-200 flex items-center justify-center text-[7px] sm:text-[8px] font-bold rounded flex-shrink-0">LOGO</div>
+                    <h1 class="text-base sm:text-xl font-black uppercase tracking-tighter">RPR Daily Report</h1>
+                </div>
+                <div class="text-[10px] sm:text-xs font-bold">Page 2 of <span class="totalPages">2</span></div>
+            </div>
+
+            <!-- Issues & Delays -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                Issues, Delays & RFIs
+            </div>
+            <div id="issuesSection" class="text-[10px] px-3 py-2 mb-4 min-h-[80px] border border-slate-200 mx-1 rounded">
+                <!-- Filled by JS -->
+            </div>
+
+            <!-- Communications & Visitors -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                Communications & Visitors
+            </div>
+            <div id="visitorsSection" class="text-[10px] px-3 py-2 mb-4 min-h-[60px] border border-slate-200 mx-1 rounded">
+                <!-- Filled by JS -->
+            </div>
+
+            <!-- QA/QC Inspections -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                QA/QC Testing & Inspections
+            </div>
+            <div id="qaqcSection" class="text-[10px] px-3 py-2 mb-4 min-h-[80px] border border-slate-200 mx-1 rounded">
+                <!-- Filled by JS -->
+            </div>
+
+            <!-- Safety & Incidents -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                Safety & Incidents
+            </div>
+            <div id="safetySection" class="text-[10px] px-3 py-2 min-h-[80px] border border-slate-200 mx-1 rounded mb-4">
+                <!-- Filled by JS -->
+            </div>
+
+            <!-- Additional Notes (conditional) -->
+            <div id="notesWrapper" class="hidden">
+                <div class="bg-slate-600 text-white text-center font-bold py-1 uppercase text-sm mb-2 mx-1">
+                    Additional Notes & Comments
+                </div>
+                <div id="notesSection" class="text-[10px] px-3 py-2 min-h-[60px] border border-slate-200 mx-1 rounded">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Signature Block -->
+            <div class="mt-8 mx-1 border-t-2 border-slate-900 pt-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                    <div class="text-[9px] text-slate-500 font-bold uppercase">
+                        Report prepared by Resident Project Representative
+                    </div>
+                    <div class="text-right w-full sm:w-auto">
+                        <div id="signatureLine" class="border-b border-slate-900 w-full sm:w-56 mb-1 h-8 flex items-end justify-center">
+                            <span class="italic font-serif text-lg text-slate-700"></span>
+                        </div>
+                        <div class="text-[8px] font-bold text-slate-500 uppercase">RPR Signature / Date</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: PHOTOS (conditional) -->
+        <div id="page3" class="report-page bg-white border-4 border-slate-900 p-1 mb-8 print:mb-0 print:border-2 page-break hidden">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 border-b-2 border-slate-900 pb-2 mb-4 px-2">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 bg-slate-200 flex items-center justify-center text-[7px] sm:text-[8px] font-bold rounded flex-shrink-0">LOGO</div>
+                    <h1 class="text-base sm:text-xl font-black uppercase tracking-tighter">RPR Daily Report</h1>
+                </div>
+                <div class="text-[10px] sm:text-xs font-bold">Page 3 of <span class="totalPages">3</span></div>
+            </div>
+
+            <!-- Photos Section -->
+            <div class="bg-emerald-900 text-white text-center font-bold py-1 uppercase text-sm mb-4 mx-1">
+                Daily Progress Photos
+            </div>
+            <div id="photosGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 px-3">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ CONFIGURATION ============
+        const N8N_SUBMIT_WEBHOOK = "https://advidere.app.n8n.cloud/webhook/fieldvoice-submit";
+
+        // ============ STATE MANAGEMENT ============
+        function getReportKey() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('key') || getTodayKey();
+        }
+
+        function getTodayKey() {
+            return `fieldvoice_report_${new Date().toISOString().split('T')[0]}`;
+        }
+
+        function getReport() {
+            const key = getReportKey();
+
+            // Try specific key first
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Ensure required properties exist for legacy reports
+                    if (!parsed.meta) parsed.meta = {};
+                    if (!parsed.meta.naMarked) parsed.meta.naMarked = {};
+                    if (!parsed.safety) parsed.safety = { hasIncidents: false, noIncidents: false, notes: [] };
+                    if (!parsed.refinedData) parsed.refinedData = {};
+                    return parsed;
+                } catch (e) {}
+            }
+
+            // Fallback to legacy key
+            const legacy = localStorage.getItem('fieldvoice_report');
+            if (legacy) {
+                try {
+                    const parsed = JSON.parse(legacy);
+                    // Ensure required properties exist for legacy reports
+                    if (!parsed.meta) parsed.meta = {};
+                    if (!parsed.meta.naMarked) parsed.meta.naMarked = {};
+                    if (!parsed.safety) parsed.safety = { hasIncidents: false, noIncidents: false, notes: [] };
+                    if (!parsed.refinedData) parsed.refinedData = {};
+                    return parsed;
+                } catch (e) {}
+            }
+
+            return getInitialReport();
+        }
+
+        function getInitialReport() {
+            return {
+                reporter: {
+                    name: ""
+                },
+                project: {
+                    name: "",
+                    dayNumber: null
+                },
+                overview: {
+                    projectName: "",
+                    noabProjectNo: "",
+                    cnoSolicitationNo: "",
+                    noticeToProceed: "",
+                    contractDuration: "",
+                    expectedCompletion: "",
+                    contractDayNo: "",
+                    weatherDays: "0 days",
+                    date: new Date().toLocaleDateString(),
+                    location: "",
+                    engineer: "",
+                    contractor: "",
+                    startTime: "",
+                    endTime: "",
+                    shiftDuration: "",
+                    completedBy: "",
+                    weather: {
+                        highTemp: "--",
+                        lowTemp: "--",
+                        precipitation: "0.00\"",
+                        generalCondition: "--",
+                        jobSiteCondition: "Dry",
+                        adverseConditions: "N/A",
+                    },
+                },
+                contractors: [],
+                activities: [],
+                operations: [],
+                equipment: [],
+                generalIssues: [],
+                communications: [],
+                qaqcNotes: [],
+                safety: { hasIncidents: false, notes: [] },
+                visitorsRemarks: [],
+                photos: [],
+                additionalNotes: "",
+            };
+        }
+
+        // ============ RENDER REPORT ============
+        function renderReport() {
+            const report = getReport();
+            const o = report.overview;
+            const w = o.weather || {};
+
+            // Get reporter and project info (new fields with fallback to overview for legacy)
+            const reporterName = report.reporter?.name || o.completedBy || '';
+            const projectName = report.project?.name || o.projectName || '';
+            const projectDay = report.project?.dayNumber ? `Day ${report.project.dayNumber}` : o.contractDayNo || '';
+
+            // Update document title
+            document.title = `Daily Report - ${o.date} - FieldVoice Pro`;
+            document.getElementById('reportDate').textContent = o.date;
+
+            // Page 1: Overview Grid
+            document.getElementById('overviewGrid').innerHTML = `
+                <div class="sm:border-r border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">PROJECT NAME:</span><br>
+                    <span class="font-bold break-words">${projectName || '--'}</span>
+                </div>
+                <div class="border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">DATE:</span><br>
+                    <span class="font-bold">${o.date}</span>
+                </div>
+
+                <div class="sm:border-r border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">CONTRACT DAY:</span><br>
+                    <span class="font-bold">${projectDay || '--'}</span>
+                </div>
+                <div class="border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">LOCATION:</span><br>
+                    <span class="font-bold break-words">${o.location || '--'}</span>
+                </div>
+
+                <div class="sm:border-r border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">PROJECT NO:</span><br>
+                    <span class="font-bold">${o.noabProjectNo || '--'}</span>
+                </div>
+                <div class="border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">PRIME CONTRACTOR:</span><br>
+                    <span class="font-bold break-words">${o.contractor || '--'}</span>
+                </div>
+
+                <div class="sm:border-r border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">SHIFT HOURS:</span><br>
+                    <span class="font-bold">${o.startTime || '--'} - ${o.endTime || '--'} (${o.shiftDuration || '--'})</span>
+                </div>
+                <div class="border-b border-slate-900 p-2">
+                    <span class="font-black text-slate-600">ENGINEER:</span><br>
+                    <span class="font-bold break-words">${o.engineer || '--'}</span>
+                </div>
+
+                <div class="sm:border-r border-b sm:border-b-0 border-slate-900 p-2">
+                    <span class="font-black text-slate-600">WEATHER CONDITIONS:</span><br>
+                    <div class="grid grid-cols-2 gap-1 mt-1">
+                        <span>High: <strong>${w.highTemp || '--'}</strong></span>
+                        <span>Low: <strong>${w.lowTemp || '--'}</strong></span>
+                        <span>Precip: <strong>${w.precipitation || '--'}</strong></span>
+                        <span>Condition: <strong>${w.generalCondition || '--'}</strong></span>
+                    </div>
+                    <div class="mt-1">
+                        <span>Site Condition: <strong class="${w.jobSiteCondition === 'Wet' ? 'text-blue-600' : 'text-emerald-600'}">${w.jobSiteCondition || 'Dry'}</strong></span>
+                    </div>
+                </div>
+                <div class="p-2 flex flex-col justify-between">
+                    <div>
+                        <span class="font-black text-slate-600">COMPLETED BY:</span>
+                    </div>
+                    <div class="text-right mt-2">
+                        <div class="border-b border-slate-900 w-full mb-1 pb-1 text-center italic font-serif text-base break-words">${reporterName || '--'}</div>
+                        <div class="text-[8px] font-black text-slate-500 uppercase">RPR Name & Title</div>
+                    </div>
+                </div>
+            `;
+
+            // Page 1: Work Summary - check for refined data first
+            const workSummary = document.getElementById('workSummary');
+            const refinedActivities = report.refinedData?.activities;
+
+            if (refinedActivities) {
+                // Use refined text if available
+                workSummary.innerHTML = `
+                    <p class="font-bold text-slate-700 mb-3">Construction Activities Performed and Observed on this Date:</p>
+                    <div class="mb-4 pb-3">
+                        <p class="text-slate-700 leading-relaxed">${refinedActivities.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `;
+            } else if (report.activities.length === 0) {
+                workSummary.innerHTML = `
+                    <p class="font-bold text-slate-700 mb-2">Construction Activities Performed and Observed on this Date:</p>
+                    <p class="italic text-slate-400">No work summary recorded for today.</p>
+                `;
+            } else {
+                workSummary.innerHTML = `
+                    <p class="font-bold text-slate-700 mb-3">Construction Activities Performed and Observed on this Date:</p>
+                    ${report.activities.map(act => `
+                        <div class="mb-4 pb-3 border-b border-slate-100 last:border-0">
+                            <p class="font-black uppercase text-emerald-800 mb-1">${act.contractor} – ${act.trade || 'GENERAL CONTRACTOR'}</p>
+                            <p class="text-slate-700 leading-relaxed">${act.narrative || 'Work performed - details not recorded.'}</p>
+                            ${act.equipmentSummary ? `<p class="mt-1"><span class="font-bold text-slate-600">EQUIPMENT:</span> ${act.equipmentSummary}</p>` : ''}
+                            ${act.crewSummary ? `<p class="mt-1"><span class="font-bold text-slate-600">CREW:</span> ${act.crewSummary}</p>` : ''}
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            // Page 2: Issues - check for refined data first
+            const issuesSection = document.getElementById('issuesSection');
+            const refinedIssues = report.refinedData?.issues;
+            const naMarked = report.meta?.naMarked || {};
+
+            if (naMarked.issues) {
+                issuesSection.innerHTML = '<p class="italic text-slate-400">N/A - No issues reported.</p>';
+            } else if (refinedIssues) {
+                issuesSection.innerHTML = `<p class="text-slate-700">${refinedIssues.replace(/\n/g, '<br>')}</p>`;
+            } else if (report.generalIssues.length > 0) {
+                issuesSection.innerHTML = `<ul class="list-disc list-inside space-y-1">${report.generalIssues.map(issue => `<li>${issue}</li>`).join('')}</ul>`;
+            } else {
+                issuesSection.innerHTML = '<p class="italic text-slate-400">No issues, delays, or RFIs reported.</p>';
+            }
+
+            // Page 2: Visitors - check for refined data first
+            const visitorsSection = document.getElementById('visitorsSection');
+            const refinedVisitors = report.refinedData?.visitors;
+
+            if (naMarked.visitors) {
+                visitorsSection.innerHTML = '<p class="italic text-slate-400">N/A - No visitors.</p>';
+            } else if (refinedVisitors) {
+                visitorsSection.innerHTML = `<p class="text-slate-700">${refinedVisitors.replace(/\n/g, '<br>')}</p>`;
+            } else {
+                const visitorsContent = [
+                    ...(report.visitorsRemarks || []),
+                    ...(report.communications || [])
+                ];
+                visitorsSection.innerHTML = visitorsContent.length > 0
+                    ? `<ul class="list-disc list-inside space-y-1">${visitorsContent.map(v => `<li>${v}</li>`).join('')}</ul>`
+                    : '<p class="italic text-slate-400">No visitors or significant communications recorded.</p>';
+            }
+
+            // Page 2: QA/QC - check for refined data first
+            const qaqcSection = document.getElementById('qaqcSection');
+            const refinedInspections = report.refinedData?.inspections;
+
+            if (naMarked.inspections) {
+                qaqcSection.innerHTML = '<p class="italic text-slate-400">N/A - No inspections.</p>';
+            } else if (refinedInspections) {
+                qaqcSection.innerHTML = `<p class="text-slate-700">${refinedInspections.replace(/\n/g, '<br>')}</p>`;
+            } else if (report.qaqcNotes.length > 0) {
+                qaqcSection.innerHTML = `<ul class="list-disc list-inside space-y-1">${report.qaqcNotes.map(note => `<li>${note}</li>`).join('')}</ul>`;
+            } else {
+                qaqcSection.innerHTML = '<p class="italic text-slate-400">No QA/QC inspections or testing recorded.</p>';
+            }
+
+            // Page 2: Safety - check for refined data first
+            const safetySection = document.getElementById('safetySection');
+            const refinedSafety = report.refinedData?.safety;
+            const safety = report.safety || { hasIncidents: false, notes: [] };
+
+            safetySection.innerHTML = `
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${safety.hasIncidents ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
+                        <i class="fas ${safety.hasIncidents ? 'fa-exclamation-triangle' : 'fa-check-circle'}"></i>
+                        ${safety.hasIncidents ? 'Incidents Reported' : 'No Incidents'}
+                    </span>
+                </div>
+                ${refinedSafety
+                    ? `<p class="text-slate-700">${refinedSafety.replace(/\n/g, '<br>')}</p>`
+                    : (safety.notes && safety.notes.length > 0
+                        ? `<ul class="list-disc list-inside space-y-1">${safety.notes.map(note => `<li>${note}</li>`).join('')}</ul>`
+                        : '<p class="italic text-slate-400">No additional safety notes.</p>'
+                    )
+                }
+            `;
+
+            // Page 2: Additional Notes (conditional) - check for refined data first
+            const notesWrapper = document.getElementById('notesWrapper');
+            const notesSection = document.getElementById('notesSection');
+            const refinedNotes = report.refinedData?.notes;
+            const originalNotes = report.additionalNotes || '';
+
+            if (refinedNotes || originalNotes) {
+                notesWrapper.classList.remove('hidden');
+                if (refinedNotes) {
+                    notesSection.innerHTML = `<p class="text-slate-700">${refinedNotes.replace(/\n/g, '<br>')}</p>`;
+                } else {
+                    notesSection.innerHTML = `<p class="text-slate-700">${originalNotes.replace(/\n/g, '<br>')}</p>`;
+                }
+            } else {
+                notesWrapper.classList.add('hidden');
+            }
+
+            // Signature line
+            document.getElementById('signatureLine').querySelector('span').textContent = reporterName;
+
+            // Page 3: Photos (conditional)
+            const page3 = document.getElementById('page3');
+            const photosGrid = document.getElementById('photosGrid');
+
+            if (report.photos && report.photos.length > 0) {
+                page3.classList.remove('hidden');
+                photosGrid.innerHTML = report.photos.map(p => `
+                    <div class="border border-slate-300 rounded overflow-hidden">
+                        <img src="${p.url}" class="w-full h-40 object-cover" alt="${p.caption || 'Site photo'}">
+                        <div class="p-2 bg-slate-50 text-[9px]">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-bold text-slate-600">${p.date || '--'}</span>
+                                <span class="text-slate-400">${p.time || ''}</span>
+                            </div>
+                            <p class="text-slate-700">${p.caption || 'No caption provided.'}</p>
+                            ${p.gps ? `<p class="text-slate-400 mt-1 text-[8px]"><i class="fas fa-map-marker-alt mr-1"></i>${p.gps.lat.toFixed(5)}, ${p.gps.lng.toFixed(5)}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                // Update page counts
+                document.getElementById('totalPages').textContent = '3';
+                document.querySelectorAll('.totalPages').forEach(el => el.textContent = '3');
+            } else {
+                page3.classList.add('hidden');
+                document.getElementById('totalPages').textContent = '2';
+                document.querySelectorAll('.totalPages').forEach(el => el.textContent = '2');
+            }
+        }
+
+        // ============ SUBMIT REPORT ============
+
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = {
+                success: 'bg-emerald-600',
+                error: 'bg-red-600',
+                warning: 'bg-orange-500',
+                info: 'bg-blue-600'
+            };
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 mb-2 animate-fade-in`;
+            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span class="font-bold text-sm">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Show confirmation modal
+        function showSubmitConfirmation() {
+            const report = getReport();
+
+            // Check if already submitted
+            if (report.meta?.submitted) {
+                showToast('This report has already been submitted', 'warning');
+                return;
+            }
+
+            document.getElementById('submit-modal').classList.remove('hidden');
+        }
+
+        // Hide confirmation modal
+        function hideSubmitConfirmation() {
+            document.getElementById('submit-modal').classList.add('hidden');
+        }
+
+        // Gather all report data for submission
+        function gatherReportData() {
+            const report = getReport();
+            const o = report.overview || {};
+            const w = o.weather || {};
+            const safety = report.safety || { hasIncidents: false, notes: [] };
+            const naMarked = report.meta?.naMarked || {};
+
+            // Get refined or original text for each section
+            const getTextContent = (section, originalData) => {
+                if (naMarked[section]) return 'N/A';
+                return report.refinedData?.[section] || originalData || '';
+            };
+
+            // Prepare activities text
+            let workSummaryText = '';
+            if (report.refinedData?.activities) {
+                workSummaryText = report.refinedData.activities;
+            } else if (report.activities?.length > 0) {
+                workSummaryText = report.activities.map(a => a.narrative).join('\n\n');
+            }
+
+            // Prepare issues text
+            let issuesText = getTextContent('issues', report.generalIssues?.join('\n\n') || '');
+
+            // Prepare inspections text
+            let inspectionsText = getTextContent('inspections', report.qaqcNotes?.join('\n\n') || '');
+
+            // Prepare visitors text
+            let visitorsText = '';
+            if (naMarked.visitors) {
+                visitorsText = 'N/A';
+            } else if (report.refinedData?.visitors) {
+                visitorsText = report.refinedData.visitors;
+            } else {
+                const visitorsContent = [...(report.visitorsRemarks || []), ...(report.communications || [])];
+                visitorsText = visitorsContent.join('\n\n');
+            }
+
+            // Prepare safety text
+            let safetyNotes = '';
+            if (report.refinedData?.safety) {
+                safetyNotes = report.refinedData.safety;
+            } else if (safety.notes?.length > 0) {
+                safetyNotes = safety.notes.join('\n\n');
+            }
+
+            // Prepare additional notes
+            let additionalNotes = report.refinedData?.notes || report.additionalNotes || '';
+
+            // Prepare photos array with base64 data
+            const photos = (report.photos || []).map(p => ({
+                id: p.id || `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                base64: p.url || '',
+                timestamp: p.timestamp || null,
+                gps: p.gps || null,
+                caption: p.caption || ''
+            }));
+
+            return {
+                submittedAt: new Date().toISOString(),
+                reporter: {
+                    name: report.reporter?.name || o.completedBy || ''
+                },
+                project: {
+                    name: report.project?.name || o.projectName || '',
+                    dayNumber: report.project?.dayNumber || null
+                },
+                date: o.date || new Date().toLocaleDateString(),
+                startTime: o.startTime || '',
+                endTime: o.endTime || '',
+                shiftDuration: o.shiftDuration || '',
+                weather: {
+                    highTemp: w.highTemp || '',
+                    lowTemp: w.lowTemp || '',
+                    precipitation: w.precipitation || '',
+                    generalCondition: w.generalCondition || '',
+                    jobSiteCondition: w.jobSiteCondition || 'Dry'
+                },
+                workSummary: workSummaryText,
+                issues: issuesText,
+                inspections: inspectionsText,
+                safety: {
+                    hasIncidents: safety.hasIncidents || false,
+                    notes: safetyNotes
+                },
+                visitors: visitorsText,
+                additionalNotes: additionalNotes,
+                photos: photos
+            };
+        }
+
+        // Submit report to webhook
+        async function submitReport() {
+            const submitBtn = document.getElementById('submit-report-btn');
+            const confirmBtn = document.getElementById('confirm-submit-btn');
+            const originalBtnHtml = submitBtn.innerHTML;
+            const originalConfirmHtml = confirmBtn.innerHTML;
+
+            // Check if offline first
+            if (!navigator.onLine) {
+                hideSubmitConfirmation();
+                showToast('You are offline - Please connect to the internet to submit your report', 'error');
+                return;
+            }
+
+            // Set loading state
+            submitBtn.disabled = true;
+            confirmBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Submitting...';
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Submitting...';
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                const payload = gatherReportData();
+
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for photos
+
+                const response = await fetch(N8N_SUBMIT_WEBHOOK, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                }
+
+                // Mark report as submitted
+                const report = getReport();
+                if (!report.meta) report.meta = {};
+                report.meta.submitted = true;
+                report.meta.submittedAt = new Date().toISOString();
+
+                // Save updated report
+                const key = getReportKey();
+                localStorage.setItem(key, JSON.stringify(report));
+                localStorage.setItem('fieldvoice_report', JSON.stringify(report));
+
+                // Update button to show success
+                submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Submitted';
+                submitBtn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+                submitBtn.classList.add('bg-emerald-600', 'cursor-default');
+                submitBtn.disabled = true;
+
+                hideSubmitConfirmation();
+                showToast('Report submitted successfully!', 'success');
+
+            } catch (error) {
+                console.error('Submit error:', error);
+
+                // Restore button state
+                submitBtn.disabled = false;
+                confirmBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+                confirmBtn.innerHTML = originalConfirmHtml;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                let errorMessage = 'Failed to submit report';
+                if (error.name === 'AbortError') {
+                    errorMessage = 'Request timed out - please try again';
+                } else if (error.message.includes('fetch')) {
+                    errorMessage = 'Network error - check your connection';
+                } else if (error.message.includes('Server error')) {
+                    errorMessage = error.message;
+                }
+
+                hideSubmitConfirmation();
+                showToast(errorMessage, 'error');
+            }
+        }
+
+        // Check if report was already submitted and update button
+        function checkSubmittedStatus() {
+            const report = getReport();
+            if (report.meta?.submitted) {
+                const submitBtn = document.getElementById('submit-report-btn');
+                submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Submitted';
+                submitBtn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+                submitBtn.classList.add('bg-emerald-600', 'cursor-default');
+                submitBtn.disabled = true;
+            }
+        }
+
+        // ============ MARK REPORT AS VIEWED ============
+        function markReportAsViewed() {
+            const report = getReport();
+            if (report && !report.meta?.reportViewed) {
+                if (!report.meta) report.meta = {};
+                report.meta.reportViewed = true;
+                const key = getReportKey();
+                localStorage.setItem(key, JSON.stringify(report));
+                localStorage.setItem('fieldvoice_report', JSON.stringify(report));
+            }
+        }
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            renderReport();
+            checkSubmittedStatus();
+            markReportAsViewed();
+        });
+    </script>
+
+    <!-- PWA Navigation Fix - Prevent Safari from breaking out of standalone mode -->
+    <script>
+        (function() {
+            // Only apply fix when running as installed PWA
+            if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+                document.addEventListener('click', function(e) {
+                    const link = e.target.closest('a');
+                    if (link && link.href && link.href.startsWith(window.location.origin)) {
+                        // Internal link - prevent default and use location.href
+                        e.preventDefault();
+                        window.location.href = link.href;
+                    }
+                }, true);
+            }
+        })();
+    </script>
+
+    <!-- PWA Service Worker Registration & Offline Banner -->
+    <div id="offline-banner" class="fixed top-0 left-0 right-0 bg-yellow-500 text-yellow-900 text-center py-2 px-4 font-bold text-sm z-[9999] transform -translate-y-full transition-transform duration-300 print-hidden" style="display: none;">
+        <i class="fas fa-wifi-slash mr-2"></i>You are offline - Some features may be unavailable
+    </div>
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('[PWA] Service Worker registered:', registration.scope);
+
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('[PWA] New version available');
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.error('[PWA] Service Worker registration failed:', error);
+                    });
+            });
+        }
+
+        // Offline/Online Event Handlers
+        const offlineBanner = document.getElementById('offline-banner');
+
+        function showOfflineBanner() {
+            if (offlineBanner) {
+                offlineBanner.style.display = 'block';
+                setTimeout(() => {
+                    offlineBanner.style.transform = 'translateY(0)';
+                }, 10);
+            }
+        }
+
+        function hideOfflineBanner() {
+            if (offlineBanner) {
+                offlineBanner.style.transform = 'translateY(-100%)';
+                setTimeout(() => {
+                    offlineBanner.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        window.addEventListener('online', hideOfflineBanner);
+        window.addEventListener('offline', showOfflineBanner);
+
+        // Check initial state
+        if (!navigator.onLine) {
+            showOfflineBanner();
+        }
+    </script>
+</body>
+</html>
