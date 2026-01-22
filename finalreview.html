@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Final Review - FieldVoice Pro</title>
+    <title>Final Review - DOT RPR Daily Report</title>
 
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="./manifest.json">
@@ -11,570 +11,798 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#0a1628">
+    <meta name="theme-color" content="#4a7c59">
 
     <!-- iOS PWA Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FieldVoice">
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'dot-navy': '#0a1628',
-                        'dot-blue': '#1e3a5f',
-                        'dot-slate': '#334155',
-                        'dot-orange': '#ea580c',
-                        'dot-yellow': '#f59e0b',
-                        'safety-green': '#16a34a',
-                    }
-                }
-            }
-        }
-    </script>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            line-height: 1.3;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+            color: #000;
         }
-        .header-stripe {
-            background: repeating-linear-gradient(-45deg, #f59e0b, #f59e0b 10px, #0a1628 10px, #0a1628 20px);
-            height: 4px;
-        }
-        /* DOT Section Headers - Green */
-        .section-header {
-            background: #16a34a;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            padding: 0.5rem 1rem;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-        .section-header.navy {
-            background: #0a1628;
-        }
-        /* Table styles */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.75rem;
-        }
-        .data-table th {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            padding: 0.5rem;
-            text-align: left;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.65rem;
-            color: #64748b;
-        }
-        .data-table td {
-            border: 1px solid #e2e8f0;
-            padding: 0.5rem;
-            vertical-align: top;
-        }
-        .data-table .totals-row {
-            background: #f8fafc;
-            font-weight: bold;
-        }
-        /* Overview grid */
-        .overview-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0;
-        }
-        .overview-grid .label {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            padding: 0.5rem;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: #64748b;
-        }
-        .overview-grid .value {
-            border: 1px solid #e2e8f0;
-            padding: 0.5rem;
-            font-size: 0.8rem;
-            color: #1e293b;
+
+        /* Page container */
+        .page {
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0 auto;
             background: white;
+            padding: 0.4in;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        /* Contractor card */
-        .contractor-card {
-            border: 2px solid #e2e8f0;
-            margin-bottom: 1rem;
-            background: white;
+
+        /* Header area */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4a7c59;
         }
-        .contractor-card.prime {
-            border-color: #16a34a;
-        }
-        .contractor-card.sub {
-            border-color: #1e3a5f;
-        }
-        /* Photo styles */
-        .photo-card {
-            border: 2px solid #e2e8f0;
-            margin-bottom: 1rem;
-            background: white;
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        .photo-card-image {
-            position: relative;
-            background: #f8fafc;
+        .header-logo {
+            width: 100px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100px;
         }
-        .photo-card-image img {
-            display: block;
+        .header-logo img {
             max-width: 100%;
-            max-height: 500px;
-            width: auto;
-            height: auto;
+            max-height: 100%;
             object-fit: contain;
         }
-        .photo-card-image.portrait img {
-            max-height: 400px;
+        .header-logo-placeholder {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #4a7c59;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: #4a7c59;
+            padding: 8px;
         }
-        .photo-card-image.landscape img {
+        .header-title {
+            text-align: right;
+        }
+        .header-title h1 {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4a7c59;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+
+        /* Section headers */
+        .section-header {
+            background: #4a7c59;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 6px 10px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            margin: 0;
+        }
+        .section-header.red {
+            background: #b91c1c;
+        }
+        .section-header.blue {
+            background: #1e40af;
+        }
+        .section-header.purple {
+            background: #6b21a8;
+        }
+        .section-header.amber {
+            background: #d97706;
+        }
+        .section-header.navy {
+            background: #1e3a5f;
+        }
+
+        /* Form table styles */
+        .form-table {
             width: 100%;
-            max-height: 350px;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+        }
+        .form-table td,
+        .form-table th {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+        .form-table .label {
+            background: #e5e5e5;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 9px;
+            width: 18%;
+            white-space: nowrap;
+        }
+        .form-table .value {
+            background: white;
+            width: 32%;
+            font-size: 10px;
+        }
+        .form-table .weather-label {
+            background: #e5e5e5;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 9px;
+            vertical-align: top;
+            width: 12%;
+        }
+        .form-table .weather-data {
+            background: white;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        .form-table .signature-area {
+            background: white;
+            vertical-align: bottom;
+            text-align: center;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+            min-height: 20px;
+        }
+        .signature-name {
+            font-style: italic;
+            font-size: 10px;
+        }
+        .signature-note {
+            font-size: 8px;
+            color: #666;
+        }
+
+        /* Daily Work Summary styles */
+        .work-summary-intro {
+            font-weight: bold;
+            font-size: 10px;
+            margin: 8px 0;
+            text-decoration: underline;
+        }
+        .contractor-block {
+            margin-bottom: 12px;
+            page-break-inside: avoid;
+        }
+        .contractor-header {
+            font-weight: bold;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .contractor-narrative {
+            margin-bottom: 4px;
+            font-size: 10px;
+            text-align: justify;
+        }
+        .contractor-details {
+            font-size: 10px;
+        }
+        .contractor-details strong {
+            font-weight: bold;
+        }
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 10px;
+        }
+        .data-table th {
+            background: #e5e5e5;
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 9px;
+            text-align: center;
+        }
+        .data-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+        .data-table .totals-row {
+            background: #f0f0f0;
+            font-weight: bold;
+        }
+        .data-table .text-center {
+            text-align: center;
+        }
+
+        /* Text section styles */
+        .text-section {
+            border: 1px solid #000;
+            margin-bottom: 12px;
+        }
+        .text-section-content {
+            padding: 8px;
+            min-height: 40px;
+            font-size: 10px;
+        }
+
+        /* Safety checkbox styles */
+        .safety-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 16px;
+        }
+        .checkbox-box {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #000;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        /* Photo styles */
+        .photo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .photo-item {
+            border: 1px solid #000;
+            page-break-inside: avoid;
+        }
+        .photo-item-header {
+            background: #e5e5e5;
+            padding: 4px 8px;
+            font-weight: bold;
+            font-size: 9px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+        }
+        .photo-item-image {
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 150px;
+        }
+        .photo-item-image img {
+            max-width: 100%;
+            max-height: 200px;
             object-fit: contain;
         }
+        .photo-item-caption {
+            padding: 6px 8px;
+            font-size: 9px;
+            border-top: 1px solid #000;
+            background: white;
+        }
+        .photo-meta {
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        /* Signature block at end */
+        .signature-block {
+            margin-top: 20px;
+            border: 1px solid #000;
+        }
+        .signature-block-content {
+            padding: 12px;
+        }
+        .signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        .signature-field label {
+            font-size: 9px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #666;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .signature-field span {
+            font-size: 11px;
+        }
+        .final-signature {
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            margin-top: 16px;
+        }
+        .final-signature-line {
+            flex: 1;
+        }
+        .final-signature-line .line {
+            border-bottom: 1px solid #000;
+            height: 30px;
+        }
+        .final-signature-line .label {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .final-signature-date {
+            width: 120px;
+        }
+        .final-signature-date .line {
+            border-bottom: 1px solid #000;
+            height: 30px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 2px;
+            font-size: 10px;
+        }
+        .final-signature-date .label {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        /* Toolbar - no print */
+        .toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #1e3a5f;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toolbar-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .toolbar-btn:hover {
+            background: #475569;
+        }
+        .toolbar-btn.primary {
+            background: #4a7c59;
+        }
+        .toolbar-btn.primary:hover {
+            background: #3d6b4a;
+        }
+        .toolbar-btn.danger {
+            background: #b91c1c;
+        }
+        .toolbar-btn.danger:hover {
+            background: #991b1b;
+        }
+        .toolbar-title {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .toolbar-date {
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        /* Page content with toolbar offset */
+        .page-wrapper {
+            padding-top: 60px;
+            padding-bottom: 20px;
+        }
+
+        /* Page break */
+        .page-break {
+            page-break-before: always;
+        }
+
         /* Print styles */
         @media print {
             body {
-                padding: 0;
-                font-size: 10pt;
+                background: white;
             }
             .no-print {
                 display: none !important;
+            }
+            .page-wrapper {
+                padding-top: 0;
+            }
+            .page {
+                width: 100%;
+                margin: 0;
+                padding: 0.3in;
+                box-shadow: none;
             }
             .section-header {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-            .page-break {
-                page-break-before: always;
+            .form-table .label,
+            .form-table .weather-label,
+            .data-table th,
+            .data-table .totals-row,
+            .photo-item-header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            .photo-card {
+            .photo-item {
+                page-break-inside: avoid;
+            }
+            .contractor-block {
                 page-break-inside: avoid;
             }
             @page {
                 size: 8.5in 11in;
-                margin: 0.5in;
+                margin: 0.25in;
             }
         }
-        /* Text section content */
-        .text-content {
-            white-space: pre-wrap;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-        .bullet-list {
-            list-style: disc;
-            padding-left: 1.25rem;
-        }
-        .bullet-list li {
-            margin-bottom: 0.25rem;
+
+        /* Mobile responsive */
+        @media screen and (max-width: 900px) {
+            .page {
+                width: 100%;
+                padding: 12px;
+            }
+            .header-logo,
+            .header-logo-placeholder {
+                width: 70px;
+                height: 70px;
+            }
+            .header-title h1 {
+                font-size: 18px;
+            }
+            .form-table .label,
+            .form-table .value {
+                width: auto;
+            }
+            .photo-grid {
+                grid-template-columns: 1fr;
+            }
+            .signature-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen">
-    <div class="header-stripe no-print"></div>
-
-    <!-- STICKY HEADER (no-print) -->
-    <header class="sticky top-0 z-50 bg-dot-navy text-white shadow-lg no-print">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a id="editReportLink" href="#" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold uppercase transition-colors flex items-center gap-1">
-                    <i class="fas fa-edit"></i>
-                    <span class="hidden sm:inline">Edit Report</span>
-                </a>
-                <div>
-                    <h1 class="font-bold text-sm uppercase tracking-wide">Final Review</h1>
-                    <p id="headerDate" class="text-xs text-slate-400"></p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="exportPDF()" class="px-3 py-2 bg-dot-blue hover:bg-blue-700 text-white text-xs font-bold uppercase transition-colors flex items-center gap-1">
-                    <i class="fas fa-file-pdf"></i>
-                    <span class="hidden sm:inline">Export PDF</span>
-                </button>
-                <button onclick="showCancelModal()" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase transition-colors flex items-center gap-1">
-                    <i class="fas fa-times"></i>
-                    <span class="hidden sm:inline">Cancel</span>
-                </button>
-                <a href="index.html" class="w-10 h-10 flex items-center justify-center border border-slate-600 hover:bg-slate-800 transition-colors" title="Home">
-                    <i class="fas fa-home text-slate-400"></i>
-                </a>
+<body>
+    <!-- TOOLBAR (no-print) -->
+    <div class="toolbar no-print">
+        <div class="toolbar-left">
+            <a id="editReportLink" href="#" class="toolbar-btn">
+                <i class="fas fa-edit"></i>
+                <span>Edit Report</span>
+            </a>
+            <div>
+                <div class="toolbar-title">DOT RPR Daily Report</div>
+                <div id="headerDate" class="toolbar-date"></div>
             </div>
         </div>
-    </header>
+        <div style="display: flex; gap: 8px;">
+            <button onclick="exportPDF()" class="toolbar-btn primary">
+                <i class="fas fa-file-pdf"></i>
+                <span>Export PDF</span>
+            </button>
+            <button onclick="showCancelModal()" class="toolbar-btn danger">
+                <i class="fas fa-times"></i>
+                <span>Cancel</span>
+            </button>
+            <a href="index.html" class="toolbar-btn">
+                <i class="fas fa-home"></i>
+            </a>
+        </div>
+    </div>
 
-    <!-- MAIN CONTENT -->
-    <main class="max-w-4xl mx-auto pb-8">
-        <!-- Report Container -->
-        <div id="reportContainer" class="bg-white shadow-lg">
-
-            <!-- REPORT HEADER -->
-            <section class="p-6 border-b-4 border-safety-green">
-                <!-- Project Logo -->
-                <div id="projectLogoContainer" class="hidden mb-4 text-center">
-                    <img id="projectLogo" src="" alt="Project Logo" class="max-h-[80px] object-contain mx-auto">
-                </div>
-
-                <!-- Report Title -->
-                <h1 class="text-2xl font-bold text-center text-dot-navy uppercase tracking-wide">RPR DAILY REPORT</h1>
-                <p id="reportTitleDate" class="text-center text-slate-600 mt-1"></p>
-            </section>
-
-            <!-- 1. PROJECT OVERVIEW SECTION -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2">
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Project Overview</span>
-                </div>
-                <div class="p-4">
-                    <!-- 2-Column Grid for Overview -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Left Column -->
-                        <div class="space-y-0">
-                            <div class="overview-grid">
-                                <div class="label">Project Name</div>
-                                <div class="value" id="displayProjectName">--</div>
-
-                                <div class="label">NOAB Project No.</div>
-                                <div class="value" id="displayNoabProjectNo">--</div>
-
-                                <div class="label">CNO Solicitation No.</div>
-                                <div class="value" id="displayCnoSolicitationNo">N/A</div>
-
-                                <div class="label">Notice to Proceed</div>
-                                <div class="value" id="displayNoticeToProceed">--</div>
-
-                                <div class="label">Contract Duration</div>
-                                <div class="value" id="displayContractDuration">--</div>
-
-                                <div class="label">Expected Completion</div>
-                                <div class="value" id="displayExpectedCompletion">--</div>
-
-                                <div class="label">Contract Day #</div>
-                                <div class="value" id="displayContractDay">--</div>
-
-                                <div class="label">Weather Days</div>
-                                <div class="value" id="displayWeatherDays">0</div>
-                            </div>
-                        </div>
-
-                        <!-- Right Column -->
-                        <div class="space-y-0">
-                            <div class="overview-grid">
-                                <div class="label">Date</div>
-                                <div class="value" id="displayDate">--</div>
-
-                                <div class="label">Location</div>
-                                <div class="value" id="displayLocation">--</div>
-
-                                <div class="label">Engineer</div>
-                                <div class="value" id="displayEngineer">--</div>
-
-                                <div class="label">Contractor</div>
-                                <div class="value" id="displayContractor">--</div>
-
-                                <div class="label">Start Time</div>
-                                <div class="value" id="displayStartTime">--</div>
-
-                                <div class="label">End Time</div>
-                                <div class="value" id="displayEndTime">--</div>
-
-                                <div class="label">Shift Duration</div>
-                                <div class="value" id="displayShiftDuration">--</div>
-
-                                <div class="label">Completed By</div>
-                                <div class="value" id="displayCompletedBy">--</div>
-                            </div>
-                        </div>
+    <!-- PAGE WRAPPER -->
+    <div class="page-wrapper">
+        <!-- PAGE 1 -->
+        <div class="page" id="page1">
+            <!-- HEADER -->
+            <div class="report-header">
+                <div class="header-logo" id="logoContainer">
+                    <div class="header-logo-placeholder" id="logoPlaceholder">
+                        LOUIS ARMSTRONG<br>NEW ORLEANS<br>INTERNATIONAL<br>AIRPORT
                     </div>
+                </div>
+                <div class="header-title">
+                    <h1>RPR DAILY REPORT</h1>
+                </div>
+            </div>
 
+            <!-- PROJECT OVERVIEW SECTION -->
+            <div class="section-header">PROJECT OVERVIEW</div>
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <td class="label">Project Name:</td>
+                        <td class="value" id="displayProjectName">--</td>
+                        <td class="label">Date:</td>
+                        <td class="value" id="displayDate">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">NOAB Project No.:</td>
+                        <td class="value" id="displayNoabProjectNo">--</td>
+                        <td class="label">Location:</td>
+                        <td class="value" id="displayLocation">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">CNO Solicitation No.:</td>
+                        <td class="value" id="displayCnoSolicitationNo">N/A</td>
+                        <td class="label">Engineer:</td>
+                        <td class="value" id="displayEngineer">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Notice to Proceed:</td>
+                        <td class="value" id="displayNoticeToProceed">--</td>
+                        <td class="label">Contractor:</td>
+                        <td class="value" id="displayContractor">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Contract Duration:</td>
+                        <td class="value" id="displayContractDuration">--</td>
+                        <td class="label">Start Time:</td>
+                        <td class="value" id="displayStartTime">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Expected Completion:</td>
+                        <td class="value" id="displayExpectedCompletion">--</td>
+                        <td class="label">End Time:</td>
+                        <td class="value" id="displayEndTime">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Contract Day #:</td>
+                        <td class="value" id="displayContractDay">--</td>
+                        <td class="label">Shift Duration:</td>
+                        <td class="value" id="displayShiftDuration">--</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Weather Days:</td>
+                        <td class="value" id="displayWeatherDays">0</td>
+                        <td class="label">Completed By:</td>
+                        <td class="value" id="displayCompletedBy">--</td>
+                    </tr>
                     <!-- Weather Block -->
-                    <div class="mt-4 bg-slate-50 border border-slate-200 p-4">
-                        <h3 class="text-xs font-bold text-slate-600 uppercase mb-3 flex items-center gap-2">
-                            <i class="fas fa-cloud-sun text-dot-blue"></i>
-                            Weather Conditions
-                        </h3>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase block">High Temp</span>
-                                <span id="displayWeatherHigh" class="font-medium">--</span>
-                            </div>
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase block">Low Temp</span>
-                                <span id="displayWeatherLow" class="font-medium">--</span>
-                            </div>
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase block">Precipitation</span>
-                                <span id="displayWeatherPrecip" class="font-medium">--</span>
-                            </div>
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase block">Condition</span>
-                                <span id="displayWeatherCondition" class="font-medium">--</span>
-                            </div>
-                            <div>
-                                <span class="text-xs text-slate-500 uppercase block">Job Site</span>
-                                <span id="displayWeatherJobSite" class="font-medium">--</span>
-                            </div>
-                            <div class="col-span-2 md:col-span-3">
-                                <span class="text-xs text-slate-500 uppercase block">Adverse Conditions</span>
-                                <span id="displayWeatherAdverse" class="font-medium">N/A</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    <tr>
+                        <td class="weather-label" rowspan="5">Weather:</td>
+                        <td class="weather-data" colspan="1">
+                            <span id="displayWeatherTemps">High Temp: --  Low Temp: --</span>
+                        </td>
+                        <td class="label" rowspan="5">Signature:</td>
+                        <td class="signature-area" rowspan="5">
+                            <div class="signature-line" id="displaySignatureInline"></div>
+                            <div class="signature-name" id="displaySignatureNameInline">--</div>
+                            <div class="signature-note">Digitally signed</div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="weather-data">
+                            Precipitation: <span id="displayWeatherPrecip">0.00"</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="weather-data">
+                            General Condition: <span id="displayWeatherCondition">--</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="weather-data">
+                            Job Site Condition: <span id="displayWeatherJobSite">--</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="weather-data">
+                            Adverse Conditions: <span id="displayWeatherAdverse">N/A</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
 
-            <!-- 2. DAILY WORK SUMMARY SECTION -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2">
-                    <i class="fas fa-hard-hat"></i>
-                    <span>Daily Work Summary</span>
+            <!-- DAILY WORK SUMMARY SECTION -->
+            <div class="section-header">DAILY WORK SUMMARY</div>
+            <div style="border: 1px solid #000; border-top: none; padding: 8px; margin-bottom: 12px;">
+                <div class="work-summary-intro">Construction Activities Performed and Observed on this Date:</div>
+                <div id="workSummaryContainer">
+                    <!-- Contractor blocks will be populated here -->
                 </div>
-                <div id="workSummaryContainer" class="p-4">
-                    <!-- Contractor cards will be populated here -->
-                </div>
-            </section>
+            </div>
 
-            <!-- 3. DAILY OPERATIONS TABLE -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2">
-                    <i class="fas fa-users"></i>
-                    <span>Daily Operations</span>
-                </div>
-                <div class="p-4 overflow-x-auto">
-                    <table class="data-table" id="personnelTable">
-                        <thead>
-                            <tr>
-                                <th class="min-w-[100px]">Contractor</th>
-                                <th class="min-w-[80px]">Trade</th>
-                                <th class="w-12 text-center">Super(s)</th>
-                                <th class="w-12 text-center">Foreman</th>
-                                <th class="w-12 text-center">Operator(s)</th>
-                                <th class="w-12 text-center">Laborer(s)</th>
-                                <th class="w-12 text-center">Surveyor(s)</th>
-                                <th class="w-12 text-center">Other(s)</th>
-                                <th class="w-16 text-center">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="personnelTableBody">
-                            <!-- Rows will be populated here -->
-                        </tbody>
-                        <tfoot>
-                            <tr class="totals-row">
-                                <td colspan="2" class="text-right font-bold px-2">TOTALS:</td>
-                                <td id="totalSuper" class="text-center">0</td>
-                                <td id="totalForeman" class="text-center">0</td>
-                                <td id="totalOperators" class="text-center">0</td>
-                                <td id="totalLaborers" class="text-center">0</td>
-                                <td id="totalSurveyors" class="text-center">0</td>
-                                <td id="totalOthers" class="text-center">0</td>
-                                <td id="totalAll" class="text-center font-bold">0</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </section>
+            <!-- DAILY OPERATIONS TABLE -->
+            <div class="section-header">DAILY OPERATIONS</div>
+            <table class="data-table" id="personnelTable">
+                <thead>
+                    <tr>
+                        <th style="min-width: 80px;">Contractor</th>
+                        <th style="min-width: 60px;">Trade</th>
+                        <th style="width: 50px;">Super(s)</th>
+                        <th style="width: 50px;">Foreman</th>
+                        <th style="width: 55px;">Operator(s)</th>
+                        <th style="width: 55px;">Laborer(s)</th>
+                        <th style="width: 55px;">Surveyor(s)</th>
+                        <th style="width: 50px;">Other(s)</th>
+                        <th style="width: 50px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody id="personnelTableBody">
+                    <!-- Rows will be populated here -->
+                </tbody>
+                <tfoot>
+                    <tr class="totals-row">
+                        <td colspan="2" style="text-align: right; padding-right: 8px;">TOTALS:</td>
+                        <td class="text-center" id="totalSuper">0</td>
+                        <td class="text-center" id="totalForeman">0</td>
+                        <td class="text-center" id="totalOperators">0</td>
+                        <td class="text-center" id="totalLaborers">0</td>
+                        <td class="text-center" id="totalSurveyors">0</td>
+                        <td class="text-center" id="totalOthers">0</td>
+                        <td class="text-center" id="totalAll">0</td>
+                    </tr>
+                </tfoot>
+            </table>
 
-            <!-- 4. MOBILIZED EQUIPMENT & DAILY UTILIZATION -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2">
-                    <i class="fas fa-truck"></i>
-                    <span>Mobilized Equipment & Daily Utilization</span>
-                </div>
-                <div class="p-4 overflow-x-auto">
-                    <table class="data-table" id="equipmentTable">
-                        <thead>
-                            <tr>
-                                <th class="min-w-[120px]">Contractor</th>
-                                <th class="min-w-[200px]">Equipment Type / Model</th>
-                                <th class="w-16 text-center">Qty</th>
-                                <th class="min-w-[120px]">Notes (Status)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="equipmentTableBody">
-                            <!-- Rows will be populated here -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <!-- MOBILIZED EQUIPMENT & DAILY UTILIZATION -->
+            <div class="section-header">MOBILIZED EQUIPMENT &amp; DAILY UTILIZATION</div>
+            <table class="data-table" id="equipmentTable">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Contractor</th>
+                        <th style="width: 45%;">Equipment Type / Model</th>
+                        <th style="width: 10%;">Qty</th>
+                        <th style="width: 25%;">Notes (Status)</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody">
+                    <!-- Rows will be populated here -->
+                </tbody>
+            </table>
 
-            <!-- 5. GENERAL ISSUES; UNFORESEEN CONDITIONS; NOTICES GIVEN -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2 bg-red-700">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span>General Issues; Unforeseen Conditions; Notices Given</span>
-                </div>
-                <div class="p-4">
-                    <div id="issuesContent" class="text-content text-slate-700">N/A</div>
-                </div>
-            </section>
+            <!-- GENERAL ISSUES SECTION -->
+            <div class="text-section">
+                <div class="section-header red">GENERAL ISSUES; UNFORESEEN CONDITIONS; NOTICES GIVEN</div>
+                <div class="text-section-content" id="issuesContent">N/A</div>
+            </div>
 
-            <!-- 6. COMMUNICATIONS WITH THE CONTRACTOR -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2 bg-blue-700">
-                    <i class="fas fa-comments"></i>
-                    <span>Communications with the Contractor</span>
-                </div>
-                <div class="p-4">
-                    <div id="communicationsContent" class="text-content text-slate-700">N/A</div>
-                </div>
-            </section>
+            <!-- COMMUNICATIONS SECTION -->
+            <div class="text-section">
+                <div class="section-header blue">COMMUNICATIONS WITH THE CONTRACTOR</div>
+                <div class="text-section-content" id="communicationsContent">N/A</div>
+            </div>
 
-            <!-- 7. QA/QC TESTING AND/OR INSPECTIONS -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2 bg-purple-700">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>QA/QC Testing and/or Inspections</span>
-                </div>
-                <div class="p-4">
-                    <div id="qaqcContent" class="text-content text-slate-700">N/A</div>
-                </div>
-            </section>
+            <!-- QA/QC SECTION -->
+            <div class="text-section">
+                <div class="section-header purple">QA/QC TESTING AND/OR INSPECTIONS</div>
+                <div class="text-section-content" id="qaqcContent">N/A</div>
+            </div>
 
-            <!-- 8. SAFETY REPORT -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2">
-                    <i class="fas fa-hard-hat"></i>
-                    <span>Safety Report</span>
-                </div>
-                <div class="p-4">
-                    <!-- Incident Checkbox Display -->
-                    <div class="flex items-center gap-6 mb-4 text-sm">
-                        <span class="font-bold text-slate-700">Safety Incident Today:</span>
-                        <span id="incidentYes" class="flex items-center gap-1">
-                            <span class="w-5 h-5 border-2 border-slate-400 flex items-center justify-center text-xs font-bold"></span>
-                            Yes
+            <!-- SAFETY REPORT SECTION -->
+            <div class="text-section">
+                <div class="section-header">SAFETY REPORT</div>
+                <div class="text-section-content">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Safety Incident Today:</strong>
+                        <span class="safety-checkbox">
+                            <span class="checkbox-box" id="incidentYes"></span> Yes
                         </span>
-                        <span id="incidentNo" class="flex items-center gap-1">
-                            <span class="w-5 h-5 border-2 border-slate-400 flex items-center justify-center text-xs font-bold"></span>
-                            No
+                        <span class="safety-checkbox">
+                            <span class="checkbox-box" id="incidentNo">X</span> No
                         </span>
                     </div>
-                    <div id="safetyContent" class="text-content text-slate-700">N/A</div>
+                    <div id="safetyContent">N/A</div>
                 </div>
-            </section>
+            </div>
 
-            <!-- 9. VISITORS; DELIVERIES; ADDITIONAL CONTRACT AND/OR CHANGE ORDER ACTIVITIES; OTHER REMARKS -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header flex items-center gap-2 bg-amber-600">
-                    <i class="fas fa-truck-loading"></i>
-                    <span>Visitors; Deliveries; Additional Contract and/or Change Order Activities; Other Remarks</span>
-                </div>
-                <div class="p-4">
-                    <div id="visitorsContent" class="text-content text-slate-700">N/A</div>
-                </div>
-            </section>
+            <!-- VISITORS/DELIVERIES SECTION -->
+            <div class="text-section">
+                <div class="section-header amber">VISITORS; DELIVERIES; ADDITIONAL CONTRACT AND/OR CHANGE ORDER ACTIVITIES; OTHER REMARKS</div>
+                <div class="text-section-content" id="visitorsContent">N/A</div>
+            </div>
+        </div>
 
-            <!-- 10. DAILY PHOTOS -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header navy flex items-center gap-2">
-                    <i class="fas fa-camera"></i>
-                    <span>Daily Photos</span>
-                    <span id="photoCount" class="ml-auto bg-white/20 px-2 py-0.5 rounded text-xs">0 photos</span>
-                </div>
-                <div id="photosContainer" class="p-4">
-                    <!-- Photos will be populated here -->
-                </div>
-            </section>
+        <!-- PAGE 2+ - PHOTOS -->
+        <div class="page page-break" id="photosPage">
+            <div class="section-header navy">DAILY PHOTOS <span id="photoCount" style="float: right; font-weight: normal;">(0 photos)</span></div>
+            <div id="photosContainer" style="border: 1px solid #000; border-top: none; padding: 12px;">
+                <!-- Photos will be populated here -->
+            </div>
+        </div>
 
-            <!-- 11. SIGNATURE BLOCK -->
-            <section class="border-b-4 border-slate-200">
-                <div class="section-header navy flex items-center gap-2">
-                    <i class="fas fa-signature"></i>
-                    <span>Certification & Signature</span>
-                </div>
-                <div class="p-4">
-                    <p class="text-xs text-slate-600 mb-4">
+        <!-- SIGNATURE PAGE -->
+        <div class="page page-break" id="signaturePage">
+            <div class="signature-block">
+                <div class="section-header navy">CERTIFICATION &amp; SIGNATURE</div>
+                <div class="signature-block-content">
+                    <p style="font-size: 10px; margin-bottom: 16px;">
                         I certify that the information contained in this daily report is accurate and complete to the best of my knowledge.
                     </p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <span class="text-xs text-slate-500 uppercase block">Inspector Name</span>
-                            <span id="displaySignatureName" class="font-medium text-slate-800">--</span>
+                    <div class="signature-grid">
+                        <div class="signature-field">
+                            <label>Inspector Name</label>
+                            <span id="displaySignatureName">--</span>
                         </div>
-                        <div>
-                            <span class="text-xs text-slate-500 uppercase block">Title</span>
-                            <span id="displaySignatureTitle" class="font-medium text-slate-800">--</span>
+                        <div class="signature-field">
+                            <label>Title</label>
+                            <span id="displaySignatureTitle">--</span>
                         </div>
-                        <div>
-                            <span class="text-xs text-slate-500 uppercase block">Company</span>
-                            <span id="displaySignatureCompany" class="font-medium text-slate-800">--</span>
-                        </div>
-                    </div>
-                    <div class="border-t-2 border-slate-300 pt-4">
-                        <div class="flex items-end gap-4">
-                            <div class="flex-1">
-                                <div class="border-b-2 border-slate-400 h-12"></div>
-                                <p class="text-xs text-slate-500 mt-1">Signature</p>
-                            </div>
-                            <div class="w-32">
-                                <div class="border-b-2 border-slate-400 h-12 flex items-end justify-center pb-1">
-                                    <span id="displaySignatureDate" class="text-sm"></span>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-1">Date</p>
-                            </div>
+                        <div class="signature-field">
+                            <label>Company</label>
+                            <span id="displaySignatureCompany">--</span>
                         </div>
                     </div>
-                </div>
-            </section>
-
-        </div><!-- END reportContainer -->
-    </main>
-
-    <!-- FOOTER -->
-    <footer class="bg-dot-navy text-center py-3 mt-auto no-print">
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest">
-            <i class="fas fa-shield-alt mr-1"></i>
-            DOT Compliant Field Documentation System
-        </p>
-    </footer>
-
-    <!-- Cancel Confirmation Modal -->
-    <div id="cancelModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md">
-            <div class="bg-red-600 text-white p-4 text-center">
-                <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
-                <p class="font-bold uppercase">Cancel Ongoing Report</p>
-            </div>
-            <div class="p-4">
-                <p class="text-sm text-slate-600 mb-4">
-                    Are you sure you want to cancel this report? This will <strong>permanently delete</strong> all data for this report date.
-                </p>
-                <p id="cancelReportDate" class="font-bold text-red-600 mb-4"></p>
-                <div class="space-y-2">
-                    <button onclick="confirmCancel()" class="w-full p-3 bg-red-600 hover:bg-red-700 text-white font-bold uppercase transition-colors">
-                        <i class="fas fa-trash-alt mr-2"></i>Delete Report
-                    </button>
-                    <button onclick="hideCancelModal()" class="w-full p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium transition-colors">
-                        Keep Report
-                    </button>
+                    <div class="final-signature">
+                        <div class="final-signature-line">
+                            <div class="line"></div>
+                            <div class="label">Signature</div>
+                        </div>
+                        <div class="final-signature-date">
+                            <div class="line" id="displaySignatureDate"></div>
+                            <div class="label">Date</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Cancel Confirmation Modal -->
+    <div id="cancelModal" class="no-print" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; width: 100%; max-width: 400px;">
+            <div style="background: #b91c1c; color: white; padding: 16px; text-align: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 8px;"></i>
+                <p style="font-weight: bold; text-transform: uppercase; margin: 0;">Cancel Ongoing Report</p>
+            </div>
+            <div style="padding: 16px;">
+                <p style="font-size: 12px; color: #666; margin-bottom: 12px;">
+                    Are you sure you want to cancel this report? This will <strong>permanently delete</strong> all data for this report date.
+                </p>
+                <p id="cancelReportDate" style="font-weight: bold; color: #b91c1c; margin-bottom: 16px;"></p>
+                <button onclick="confirmCancel()" style="width: 100%; padding: 12px; background: #b91c1c; color: white; border: none; font-weight: bold; text-transform: uppercase; cursor: pointer; margin-bottom: 8px;">
+                    <i class="fas fa-trash-alt" style="margin-right: 8px;"></i>Delete Report
+                </button>
+                <button onclick="hideCancelModal()" style="width: 100%; padding: 12px; background: #f1f5f9; color: #666; border: none; font-weight: 500; cursor: pointer;">
+                    Keep Report
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
-    <div id="toast-container" class="fixed bottom-4 right-4 z-50 no-print"></div>
+    <div id="toast-container" class="no-print" style="position: fixed; bottom: 16px; right: 16px; z-index: 9999;"></div>
 
     <script>
         // ============ STATE ============
@@ -689,9 +917,6 @@
         }
 
         // ============ DATA PRIORITY HELPERS ============
-        /**
-         * Get value with priority: userEdits > aiGenerated > fieldNotes > defaults
-         */
         function getValue(path, defaultValue = '') {
             // Check user edits first
             if (report.userEdits && report.userEdits[path] !== undefined) {
@@ -725,9 +950,6 @@
             return path.split('.').reduce((o, k) => (o || {})[k], obj);
         }
 
-        /**
-         * Get text field value with AI path mapping
-         */
         function getTextFieldValue(reportPath, aiPath, defaultValue = '') {
             // Check user edits
             if (report.userEdits && report.userEdits[reportPath] !== undefined) {
@@ -760,22 +982,25 @@
         // ============ POPULATE FIELDS ============
         function populateAllFields() {
             // Project Logo
-            const logoContainer = document.getElementById('projectLogoContainer');
-            const logoImg = document.getElementById('projectLogo');
+            const logoContainer = document.getElementById('logoContainer');
+            const logoPlaceholder = document.getElementById('logoPlaceholder');
             if (activeProject?.logo) {
-                logoImg.src = activeProject.logo;
-                logoContainer.classList.remove('hidden');
+                logoContainer.innerHTML = `<img src="${activeProject.logo}" alt="Project Logo">`;
             }
 
-            // Report Title Date
+            // Report Date
             const dateObj = new Date(reportDate + 'T12:00:00');
             const formattedDate = dateObj.toLocaleDateString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                year: 'numeric'
+            });
+            const longFormattedDate = dateObj.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
-            document.getElementById('reportTitleDate').textContent = formattedDate;
 
             // Project Overview - Left Column
             document.getElementById('displayProjectName').textContent = getValue('overview.projectName', activeProject?.name || '--');
@@ -815,13 +1040,18 @@
 
             document.getElementById('displayCompletedBy').textContent = getValue('overview.completedBy', '--');
 
-            // Weather
-            document.getElementById('displayWeatherHigh').textContent = getValue('overview.weather.highTemp', '--');
-            document.getElementById('displayWeatherLow').textContent = getValue('overview.weather.lowTemp', '--');
-            document.getElementById('displayWeatherPrecip').textContent = getValue('overview.weather.precipitation', '--');
+            // Weather - combined format
+            const highTemp = getValue('overview.weather.highTemp', '--');
+            const lowTemp = getValue('overview.weather.lowTemp', '--');
+            document.getElementById('displayWeatherTemps').textContent = `High Temp: ${highTemp}  Low Temp: ${lowTemp}`;
+            document.getElementById('displayWeatherPrecip').textContent = getValue('overview.weather.precipitation', '0.00"');
             document.getElementById('displayWeatherCondition').textContent = getValue('overview.weather.generalCondition', '--');
             document.getElementById('displayWeatherJobSite').textContent = getValue('overview.weather.jobSiteCondition', '--');
             document.getElementById('displayWeatherAdverse').textContent = getValue('overview.weather.adverseConditions', 'N/A') || 'N/A';
+
+            // Inline signature in overview
+            const signatureName = getValue('signature.name', getValue('overview.completedBy', '--'));
+            document.getElementById('displaySignatureNameInline').textContent = signatureName;
 
             // Text Sections
             const issues = getTextFieldValue('issues', 'generalIssues', report.guidedNotes?.issues || '');
@@ -838,20 +1068,18 @@
 
             // Safety Incident Checkboxes
             const hasIncident = getValue('safety.hasIncident', false);
-            const yesBox = document.querySelector('#incidentYes span');
-            const noBox = document.querySelector('#incidentNo span');
             if (hasIncident) {
-                yesBox.textContent = 'X';
-                noBox.textContent = '';
+                document.getElementById('incidentYes').textContent = 'X';
+                document.getElementById('incidentNo').textContent = '';
             } else {
-                yesBox.textContent = '';
-                noBox.textContent = 'X';
+                document.getElementById('incidentYes').textContent = '';
+                document.getElementById('incidentNo').textContent = 'X';
             }
 
             const visitors = getTextFieldValue('visitors', 'visitorsRemarks', '');
             document.getElementById('visitorsContent').innerHTML = formatTextContent(visitors);
 
-            // Signature
+            // Final Signature Block
             document.getElementById('displaySignatureName').textContent = getValue('signature.name', '--');
             document.getElementById('displaySignatureTitle').textContent = getValue('signature.title', '--');
             document.getElementById('displaySignatureCompany').textContent = getValue('signature.company', '--');
@@ -894,13 +1122,13 @@
 
         function formatTextContent(text) {
             if (!text || text.trim() === '') return 'N/A';
-            // Check if it looks like bullet points (lines starting with - or *)
+            // Check if it looks like bullet points
             const lines = text.split('\n').filter(l => l.trim());
             if (lines.length > 1 && lines.every(l => l.trim().startsWith('-') || l.trim().startsWith('*') || l.trim().startsWith('•'))) {
                 const listItems = lines.map(l => `<li>${escapeHtml(l.replace(/^[-*•]\s*/, ''))}</li>`).join('');
-                return `<ul class="bullet-list">${listItems}</ul>`;
+                return `<ul style="margin: 0; padding-left: 20px;">${listItems}</ul>`;
             }
-            return escapeHtml(text);
+            return escapeHtml(text).replace(/\n/g, '<br>');
         }
 
         function escapeHtml(str) {
@@ -915,22 +1143,15 @@
             const container = document.getElementById('workSummaryContainer');
 
             if (projectContractors.length === 0) {
-                // Show simplified work summary
                 const workSummary = getValue('guidedNotes.workSummary', '');
                 if (workSummary) {
-                    container.innerHTML = `
-                        <div class="p-4 bg-slate-50 border border-slate-200">
-                            <p class="text-xs font-bold text-slate-500 uppercase mb-2">Work Summary</p>
-                            <div class="text-content text-slate-700">${escapeHtml(workSummary)}</div>
-                        </div>
-                    `;
+                    container.innerHTML = `<div class="contractor-narrative">${escapeHtml(workSummary)}</div>`;
                 } else {
-                    container.innerHTML = `<p class="text-slate-500 text-center py-4">No work activities documented.</p>`;
+                    container.innerHTML = `<p style="color: #666; font-style: italic;">No work activities documented.</p>`;
                 }
                 return;
             }
 
-            // Render contractor cards
             let html = '';
             projectContractors.forEach(contractor => {
                 const activity = getContractorActivity(contractor.id);
@@ -939,25 +1160,18 @@
                 const equipment = activity?.equipmentUsed || '';
                 const crew = activity?.crew || '';
 
-                const typeLabel = contractor.type === 'prime' ? 'PRIME' : 'SUB';
-                const badgeBg = contractor.type === 'prime' ? 'bg-safety-green' : 'bg-dot-blue';
-                const cardClass = contractor.type === 'prime' ? 'prime' : 'sub';
+                const typeLabel = contractor.type === 'prime' ? 'Prime' : 'Sub';
+                const tradesDisplay = contractor.trades ? ` (${contractor.trades})` : '';
 
                 html += `
-                    <div class="contractor-card ${cardClass}">
-                        <div class="p-4">
-                            <div class="flex items-center gap-3 mb-3">
-                                <span class="${badgeBg} text-white text-[10px] font-bold px-2 py-0.5 uppercase">${typeLabel}</span>
-                                <span class="font-bold text-slate-800">${escapeHtml(contractor.name)}</span>
-                                ${contractor.trades ? `<span class="text-xs text-slate-500">(${escapeHtml(contractor.trades)})</span>` : ''}
-                            </div>
-                            ${noWork && !narrative ?
-                                `<p class="text-slate-500 italic">No work performed on ${formatDateDisplay(reportDate)}</p>` :
-                                `<div class="text-content text-slate-700 mb-3">${escapeHtml(narrative) || 'N/A'}</div>
-                                ${equipment ? `<p class="text-sm text-slate-600"><strong>Equipment:</strong> ${escapeHtml(equipment)}</p>` : ''}
-                                ${crew ? `<p class="text-sm text-slate-600"><strong>Crew:</strong> ${escapeHtml(crew)}</p>` : ''}`
-                            }
-                        </div>
+                    <div class="contractor-block">
+                        <div class="contractor-header">${escapeHtml(contractor.name)} - ${typeLabel}${tradesDisplay}</div>
+                        ${noWork && !narrative ?
+                            `<div class="contractor-narrative" style="font-style: italic;">No work performed on ${formatDateDisplay(reportDate)}.</div>` :
+                            `<div class="contractor-narrative">${escapeHtml(narrative) || 'N/A'}</div>
+                            ${equipment ? `<div class="contractor-details"><strong>EQUIPMENT:</strong> ${escapeHtml(equipment)}</div>` : ''}
+                            ${crew ? `<div class="contractor-details"><strong>CREW:</strong> ${escapeHtml(crew)}</div>` : ''}`
+                        }
                     </div>
                 `;
             });
@@ -966,13 +1180,11 @@
         }
 
         function getContractorActivity(contractorId) {
-            // Check user edits
             const userEditKey = `activity_${contractorId}`;
             if (report.userEdits && report.userEdits[userEditKey]) {
                 return report.userEdits[userEditKey];
             }
 
-            // Check AI-generated
             if (report.aiGenerated?.activities) {
                 const aiActivity = report.aiGenerated.activities.find(a => a.contractorId === contractorId);
                 if (aiActivity) {
@@ -986,7 +1198,6 @@
                 }
             }
 
-            // Fall back to report.activities
             if (report.activities) {
                 return report.activities.find(a => a.contractorId === contractorId);
             }
@@ -1000,7 +1211,7 @@
             if (projectContractors.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="text-center text-slate-400 py-4">
+                        <td colspan="9" style="text-align: center; color: #666; padding: 12px;">
                             No contractors defined.
                         </td>
                     </tr>
@@ -1030,15 +1241,15 @@
 
                 return `
                     <tr>
-                        <td class="font-medium text-xs">${escapeHtml(contractor.abbreviation || contractor.name)}</td>
-                        <td class="text-xs">${escapeHtml(contractor.trades || '-')}</td>
+                        <td style="font-weight: 500;">${escapeHtml(contractor.abbreviation || contractor.name)}</td>
+                        <td>${escapeHtml(contractor.trades || '-')}</td>
                         <td class="text-center">${supers || '-'}</td>
                         <td class="text-center">${foremen || '-'}</td>
                         <td class="text-center">${operators || '-'}</td>
                         <td class="text-center">${laborers || '-'}</td>
                         <td class="text-center">${surveyors || '-'}</td>
                         <td class="text-center">${others || '-'}</td>
-                        <td class="text-center font-bold">${rowTotal || '-'}</td>
+                        <td class="text-center" style="font-weight: bold;">${rowTotal || '-'}</td>
                     </tr>
                 `;
             }).join('');
@@ -1056,19 +1267,16 @@
         }
 
         function getContractorOperations(contractorId) {
-            // Check user edits
             const userEditKey = `operations_${contractorId}`;
             if (report.userEdits && report.userEdits[userEditKey]) {
                 return report.userEdits[userEditKey];
             }
 
-            // Check AI-generated
             if (report.aiGenerated?.operations) {
                 const aiOps = report.aiGenerated.operations.find(o => o.contractorId === contractorId);
                 if (aiOps) return aiOps;
             }
 
-            // Fall back to report.operations
             if (report.operations) {
                 return report.operations.find(o => o.contractorId === contractorId);
             }
@@ -1083,7 +1291,7 @@
             if (equipmentData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="4" class="text-center text-slate-400 py-4">
+                        <td colspan="4" style="text-align: center; color: #666; padding: 12px;">
                             No equipment documented.
                         </td>
                     </tr>
@@ -1098,10 +1306,10 @@
 
                 return `
                     <tr>
-                        <td class="text-xs">${escapeHtml(contractorName)}</td>
-                        <td class="text-xs">${escapeHtml(item.type || '--')}</td>
+                        <td>${escapeHtml(contractorName)}</td>
+                        <td>${escapeHtml(item.type || '--')}</td>
                         <td class="text-center">${item.qty || 1}</td>
-                        <td class="text-xs ${status === 'IDLE' ? 'text-slate-500 italic' : 'text-safety-green font-medium'}">${status}</td>
+                        <td style="${status === 'IDLE' ? 'color: #666; font-style: italic;' : 'color: #4a7c59; font-weight: 500;'}">${status}</td>
                     </tr>
                 `;
             }).join('');
@@ -1132,19 +1340,22 @@
             const photos = report.photos || [];
             const totalPhotos = photos.length;
 
-            document.getElementById('photoCount').textContent = `${totalPhotos} photo${totalPhotos !== 1 ? 's' : ''}`;
+            document.getElementById('photoCount').textContent = `(${totalPhotos} photo${totalPhotos !== 1 ? 's' : ''})`;
 
             if (totalPhotos === 0) {
                 container.innerHTML = `
-                    <div class="text-center text-slate-400 py-8">
-                        <i class="fas fa-images text-4xl mb-2"></i>
-                        <p class="text-sm">No photos captured</p>
+                    <div style="text-align: center; color: #666; padding: 40px;">
+                        <i class="fas fa-images" style="font-size: 32px; margin-bottom: 8px;"></i>
+                        <p style="margin: 0;">No photos captured</p>
                     </div>
                 `;
+                // Hide photos page if no photos
+                document.getElementById('photosPage').style.display = 'none';
                 return;
             }
 
-            container.innerHTML = photos.map((photo, index) => {
+            let html = '<div class="photo-grid">';
+            photos.forEach((photo, index) => {
                 const photoNum = index + 1;
                 const dateStr = photo.date || '--';
                 const timeStr = photo.time || '--';
@@ -1152,51 +1363,26 @@
                     ? `${photo.gps.lat.toFixed(5)}, ${photo.gps.lng.toFixed(5)}`
                     : null;
 
-                return `
-                    <div class="photo-card">
-                        <div class="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                            <span class="text-xs font-bold text-slate-600 uppercase">Photo ${photoNum} of ${totalPhotos}</span>
+                html += `
+                    <div class="photo-item">
+                        <div class="photo-item-header">Photo ${photoNum} of ${totalPhotos}</div>
+                        <div class="photo-item-image">
+                            <img src="${photo.url}" alt="Progress photo ${photoNum}" onerror="this.parentNode.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'><i class=\\'fas fa-exclamation-triangle\\' style=\\'font-size: 24px;\\'></i><br>Failed to load</div>'">
                         </div>
-                        <div class="photo-card-image" id="photo-container-${index}">
-                            <img
-                                src="${photo.url}"
-                                alt="Progress photo ${photoNum}"
-                                onload="handlePhotoLoad(${index})"
-                                onerror="handlePhotoError(${index})"
-                            >
-                        </div>
-                        <div class="p-4 border-t border-slate-200 bg-slate-50">
-                            <div class="flex flex-wrap gap-4 text-xs text-slate-600 mb-2">
-                                <span><i class="fas fa-calendar-alt mr-1"></i>${dateStr}</span>
-                                <span><i class="fas fa-clock mr-1"></i>${timeStr}</span>
-                                ${gpsStr ? `<span><i class="fas fa-map-marker-alt mr-1"></i>${gpsStr}</span>` : ''}
+                        <div class="photo-item-caption">
+                            <div class="photo-meta">
+                                <i class="fas fa-calendar-alt"></i> ${dateStr} &nbsp;
+                                <i class="fas fa-clock"></i> ${timeStr}
+                                ${gpsStr ? `&nbsp; <i class="fas fa-map-marker-alt"></i> ${gpsStr}` : ''}
                             </div>
-                            ${photo.caption ? `<p class="text-sm text-slate-700">${escapeHtml(photo.caption)}</p>` : '<p class="text-sm text-slate-400 italic">No caption</p>'}
+                            ${photo.caption ? escapeHtml(photo.caption) : '<span style="color: #999; font-style: italic;">No caption</span>'}
                         </div>
                     </div>
                 `;
-            }).join('');
-        }
+            });
+            html += '</div>';
 
-        function handlePhotoLoad(index) {
-            const img = document.querySelector(`#photo-container-${index} img`);
-            const container = document.getElementById(`photo-container-${index}`);
-            if (!img || !container) return;
-
-            const isPortrait = img.naturalHeight > img.naturalWidth;
-            container.classList.remove('portrait', 'landscape');
-            container.classList.add(isPortrait ? 'portrait' : 'landscape');
-        }
-
-        function handlePhotoError(index) {
-            const container = document.getElementById(`photo-container-${index}`);
-            if (!container) return;
-            container.innerHTML = `
-                <div class="p-8 text-center text-slate-400">
-                    <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
-                    <p class="text-sm">Failed to load image</p>
-                </div>
-            `;
+            container.innerHTML = html;
         }
 
         // ============ UI HELPERS ============
@@ -1205,7 +1391,8 @@
             const dateStr = dateObj.toLocaleDateString('en-US', {
                 weekday: 'short',
                 month: 'short',
-                day: 'numeric'
+                day: 'numeric',
+                year: 'numeric'
             });
             document.getElementById('headerDate').textContent = dateStr;
         }
@@ -1220,23 +1407,20 @@
                 year: 'numeric'
             });
             document.getElementById('cancelReportDate').textContent = formattedDate;
-            document.getElementById('cancelModal').classList.remove('hidden');
+            document.getElementById('cancelModal').style.display = 'flex';
         }
 
         function hideCancelModal() {
-            document.getElementById('cancelModal').classList.add('hidden');
+            document.getElementById('cancelModal').style.display = 'none';
         }
 
         function confirmCancel() {
-            // Delete report from localStorage
             const key = getReportKey();
             localStorage.removeItem(key);
 
-            // Also remove legacy key if it matches
             const legacyKey = `fieldvoice_report_${reportDate}`;
             localStorage.removeItem(legacyKey);
 
-            // Check if legacy report matches this date
             const legacyReport = localStorage.getItem('fieldvoice_report');
             if (legacyReport) {
                 try {
@@ -1266,10 +1450,10 @@
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
             const colors = {
-                success: 'bg-safety-green',
-                error: 'bg-red-600',
-                warning: 'bg-dot-orange',
-                info: 'bg-dot-blue'
+                success: '#4a7c59',
+                error: '#b91c1c',
+                warning: '#d97706',
+                info: '#1e40af'
             };
             const icons = {
                 success: 'fa-check-circle',
@@ -1277,13 +1461,13 @@
                 warning: 'fa-exclamation-triangle',
                 info: 'fa-info-circle'
             };
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 mb-2 transform translate-x-full transition-transform duration-300`;
-            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span class="font-bold text-sm">${message}</span>`;
+            toast.style.cssText = `background: ${colors[type]}; color: white; padding: 12px 16px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; margin-bottom: 8px; transform: translateX(120%); transition: transform 0.3s ease;`;
+            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span style="font-weight: bold; font-size: 12px;">${message}</span>`;
             container.appendChild(toast);
 
-            setTimeout(() => toast.classList.remove('translate-x-full'), 10);
+            setTimeout(() => toast.style.transform = 'translateX(0)', 10);
             setTimeout(() => {
-                toast.classList.add('translate-x-full');
+                toast.style.transform = 'translateX(120%)';
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
@@ -1305,8 +1489,8 @@
     </script>
 
     <!-- PWA Service Worker Registration & Offline Banner -->
-    <div id="offline-banner" class="fixed top-0 left-0 right-0 bg-yellow-500 text-yellow-900 text-center py-2 px-4 font-bold text-sm z-[9999] transform -translate-y-full transition-transform duration-300 no-print" style="display: none;">
-        <i class="fas fa-wifi-slash mr-2"></i>You are offline - Some features may be unavailable
+    <div id="offline-banner" class="no-print" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #f59e0b; color: #78350f; text-align: center; padding: 8px 16px; font-weight: bold; font-size: 12px; z-index: 9999; transform: translateY(-100%); transition: transform 0.3s ease;">
+        <i class="fas fa-wifi-slash" style="margin-right: 8px;"></i>You are offline - Some features may be unavailable
     </div>
     <script>
         if ('serviceWorker' in navigator) {
