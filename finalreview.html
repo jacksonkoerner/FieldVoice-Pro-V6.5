@@ -386,6 +386,58 @@
             color: #666;
         }
 
+        /* ============ MISSING FIELD HIGHLIGHTING ============ */
+        .missing-field {
+            border: 2px solid #dc2626 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        .incomplete-banner {
+            background: #fef2f2;
+            border-bottom: 2px solid #dc2626;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .incomplete-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #991b1b;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .incomplete-banner-content i {
+            font-size: 16px;
+        }
+
+        .incomplete-banner-dismiss {
+            background: transparent;
+            border: 1px solid #dc2626;
+            color: #dc2626;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .incomplete-banner-dismiss:hover {
+            background: #dc2626;
+            color: white;
+        }
+
+        @media print {
+            .incomplete-banner {
+                display: none !important;
+            }
+        }
+
         /* ============ SAFETY SECTION ============ */
         .safety-header {
             display: flex;
@@ -697,6 +749,15 @@
         </div>
     </header>
 
+    <!-- INCOMPLETE FIELDS BANNER -->
+    <div id="incompleteBanner" class="incomplete-banner" style="display: none;">
+        <div class="incomplete-banner-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="incompleteBannerText">0 fields incomplete</span>
+        </div>
+        <button class="incomplete-banner-dismiss" onclick="dismissIncompleteBanner()">Dismiss</button>
+    </div>
+
     <!-- PAGE CONTAINER -->
     <div class="page-container">
 
@@ -982,6 +1043,7 @@
             populateReport();
             updateTotalPages();
             checkSubmittedState();
+            checkEmptyFields();
         });
 
         // ============ CHECK SUBMITTED STATE ============
@@ -1784,6 +1846,62 @@
             const modal = document.getElementById('submitSuccessModal');
             if (modal) {
                 modal.remove();
+            }
+        }
+
+        // ============ EMPTY FIELD HIGHLIGHTING ============
+        const PROJECT_OVERVIEW_FIELDS = [
+            { id: 'projectName', label: 'Project Name' },
+            { id: 'noabProjectNo', label: 'NOAB Project No.' },
+            { id: 'cnoSolicitationNo', label: 'CNO Solicitation No.' },
+            { id: 'location', label: 'Location' },
+            { id: 'engineer', label: 'Engineer' },
+            { id: 'contractor', label: 'Contractor' },
+            { id: 'noticeToProceed', label: 'Notice to Proceed' },
+            { id: 'contractDuration', label: 'Contract Duration' },
+            { id: 'expectedCompletion', label: 'Expected Completion' },
+            { id: 'contractDay', label: 'Contract Day #' },
+            { id: 'weatherDays', label: 'Weather Days' },
+            { id: 'reportDate', label: 'Report Date' },
+            { id: 'startTime', label: 'Start Time' },
+            { id: 'endTime', label: 'End Time' },
+            { id: 'completedBy', label: 'Completed By' }
+        ];
+
+        function checkEmptyFields() {
+            let emptyCount = 0;
+
+            PROJECT_OVERVIEW_FIELDS.forEach(field => {
+                const element = document.getElementById(field.id);
+                if (!element) return;
+
+                const value = element.textContent.trim();
+                const isEmpty = value === '' || value === '--' || value === 'N/A';
+
+                if (isEmpty) {
+                    element.classList.add('missing-field');
+                    emptyCount++;
+                } else {
+                    element.classList.remove('missing-field');
+                }
+            });
+
+            // Update and show/hide banner
+            const banner = document.getElementById('incompleteBanner');
+            const bannerText = document.getElementById('incompleteBannerText');
+
+            if (emptyCount > 0) {
+                bannerText.textContent = `${emptyCount} field${emptyCount === 1 ? '' : 's'} incomplete in Project Overview`;
+                banner.style.display = 'flex';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function dismissIncompleteBanner() {
+            const banner = document.getElementById('incompleteBanner');
+            if (banner) {
+                banner.style.display = 'none';
             }
         }
     </script>
