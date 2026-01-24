@@ -11,6 +11,11 @@
 - Final verification before submission to archives
 - Export-ready layout (PDF via browser print)
 
+### Storage Backend
+
+- **Supabase Tables**: `reports`, `report_final`, `report_ai_response`, `report_user_edits`, `report_contractor_work`, `report_personnel`, `report_equipment_usage`, `report_photos`
+- **Local Storage**: Device-specific state (`fvp_active_project`)
+
 ### Data Flow
 
 ```
@@ -29,10 +34,10 @@ finalreview.html (read-only preview)
          └──→ Submit Report
                     │
                     ▼
-         Mark report.meta.submitted = true
+         Save to Supabase report_final table
                     │
                     ▼
-         Save to localStorage
+         Update reports.status to 'submitted'
                     │
                     ▼
          Success modal → archives.html
@@ -42,15 +47,20 @@ finalreview.html (read-only preview)
 
 ## Data Sources
 
-### localStorage Keys
+### Supabase Tables
 
-| Key Pattern | Description |
-|-------------|-------------|
-| `fieldvoice_report_[projectId]_YYYY-MM-DD` | Project-specific daily report (primary) |
-| `fieldvoice_report_YYYY-MM-DD` | Legacy date-only key (fallback) |
-| `fieldvoice_report` | Most recent report (backward compatibility) |
-| `fvp_projects` | Array of project configurations |
-| `fvp_active_project` | Active project ID |
+| Table | Description |
+|-------|-------------|
+| `reports` | Main report record with status |
+| `report_ai_response` | AI-generated content |
+| `report_user_edits` | User modifications |
+| `report_raw_capture` | Original field capture data |
+| `report_contractor_work` | Per-contractor work activities |
+| `report_personnel` | Per-contractor personnel counts |
+| `report_equipment_usage` | Equipment utilization |
+| `report_photos` | Photo documentation |
+| `report_final` | Finalized report snapshot |
+| `projects` | Project configuration |
 
 ### Data Priority
 
@@ -214,13 +224,13 @@ Per-contractor blocks rendered from `projectContractors` array:
 |------------|-----------|-------------|
 | `photoProjectName` | `overview.projectName` | Project name header |
 | `photoProjectNo` | `overview.noabProjectNo` | Project number header |
-| `photosGrid` | `report.photos[]` | 2x2 grid of photos |
+| `photosGrid` | Supabase `report_photos` table | 2x2 grid of photos |
 
 Photo card structure:
 
 | Element | Data Source |
 |---------|-------------|
-| Image | `photo.url` |
+| Image | `photo.photo_data` or `photo.url` |
 | Date | `photo.date` or `overview.date` |
 | Caption | `photo.caption` |
 
@@ -267,16 +277,13 @@ User clicks "Submit" button
 submitReport() function called
          │
          ▼
-Set report.meta.submitted = true
-Set report.meta.submittedAt = ISO timestamp
+Build final report content object
          │
          ▼
-Determine storage key:
-  - Project-specific: fieldvoice_report_[projectId]_[date]
-  - Legacy: fieldvoice_report_[date]
+Save to Supabase report_final table
          │
          ▼
-localStorage.setItem(key, JSON.stringify(report))
+Update reports.status to 'submitted'
          │
          ▼
 showSubmitSuccess() - display modal
@@ -286,23 +293,49 @@ showSubmitSuccess() - display modal
          └──→ "View Archives" button - navigate to archives.html
 ```
 
-### Storage Key Pattern
+### Supabase Operations
 
 ```javascript
-let storageKey;
-if (activeProject) {
-    storageKey = `fieldvoice_report_${activeProject.id}_${todayStr}`;
-} else {
-    storageKey = `fieldvoice_report_${todayStr}`;
+async function submitReport() {
+    // Build final content
+    const finalContent = buildFinalContent();
+
+    // Save to report_final table
+    const { error: finalError } = await supabase
+        .from('report_final')
+        .upsert({
+            report_id: reportId,
+            final_content: finalContent,
+            signature: signatureText,
+            status: 'submitted',
+            submitted_at: new Date().toISOString()
+        });
+
+    // Update report status
+    const { error: statusError } = await supabase
+        .from('reports')
+        .update({ status: 'submitted', updated_at: new Date().toISOString() })
+        .eq('id', reportId);
+
+    if (!finalError && !statusError) {
+        showSubmitSuccess();
+    }
 }
 ```
 
-### Report Meta Fields Set on Submit
+### Report Final Table Schema
 
-| Field | Value | Description |
-|-------|-------|-------------|
-| `report.meta.submitted` | `true` | Marks report as submitted |
-| `report.meta.submittedAt` | ISO timestamp | Submission timestamp |
+```sql
+CREATE TABLE report_final (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  final_content JSONB NOT NULL,
+  signature TEXT,
+  status TEXT DEFAULT 'submitted',
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 ---
 
@@ -378,7 +411,7 @@ When empty fields are detected, a dismissible banner appears at the top of the p
 Page loads
     │
     ▼
-populateReport() fills all fields from localStorage
+populateReport() fills all fields from Supabase
     │
     ▼
 checkEmptyFields() called
@@ -400,7 +433,7 @@ checkEmptyFields() called
 ### Re-checking After Edit
 
 When a user navigates back to `report.html`, fills in missing data, and returns to `finalreview.html`:
-1. The page reloads fresh from localStorage
+1. The page reloads fresh from Supabase
 2. `populateReport()` loads the updated data
 3. `checkEmptyFields()` re-evaluates all fields
 4. Previously highlighted fields are cleared if now populated
@@ -424,21 +457,18 @@ submitBtn.style.cursor = 'default';
 On page load, `checkSubmittedState()` checks if report was previously submitted:
 
 ```javascript
-function checkSubmittedState() {
-    if (report && report.meta && report.meta.submitted) {
+async function checkSubmittedState() {
+    const { data: report } = await supabase
+        .from('reports')
+        .select('status')
+        .eq('id', reportId)
+        .single();
+
+    if (report && report.status === 'submitted') {
         // Disable submit button, show "Submitted" state
     }
 }
 ```
-
----
-
-## Webhook Calls
-
-**No webhook calls are made on submit.** The submit action only:
-1. Updates localStorage with submitted status
-2. Displays success modal
-3. Offers navigation to archives
 
 ---
 
@@ -602,15 +632,15 @@ if (!report) {
 }
 ```
 
-### Storage Full Error
+### Supabase Errors
 
 ```javascript
 try {
-    localStorage.setItem(storageKey, JSON.stringify(report));
+    await submitReport();
     showSubmitSuccess();
 } catch (e) {
-    console.error('Failed to save report:', e);
-    alert('Failed to submit report. Storage may be full.');
+    console.error('Failed to submit report:', e);
+    alert('Failed to submit report. Please check your connection and try again.');
 }
 ```
 

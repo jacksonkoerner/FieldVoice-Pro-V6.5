@@ -10,6 +10,11 @@
 - Captures weather, work activities, issues, safety, and photos
 - Sends data TO n8n for AI processing and refinement
 
+### Storage Backend
+
+- **Supabase Tables**: `reports`, `report_raw_capture`, `report_contractor_work`, `report_personnel`, `report_equipment_usage`, `report_photos`
+- **Local Storage**: Device-specific preferences only (`fvp_active_project`)
+
 ### Webhook
 
 **Endpoint:** `https://advidere.app.n8n.cloud/webhook/fieldvoice-refine-v6`
@@ -37,7 +42,7 @@ Minimal Mode (Quick Notes)    OR    Guided Mode (Structured Sections)
              n8n AI processing
                         │
                         ▼
-        Response saved to report.aiGenerated
+        Response saved to Supabase report_ai_response table
                         │
                         ▼
           Redirect to report.html
@@ -111,7 +116,7 @@ Expandable section cards for structured input:
 | `freeform-notes-input` | textarea | Freeform dictated/typed field notes |
 | `fieldNotesCharCount` | Display | Character count |
 
-**Handler:** `updateFieldNotes(value)` saves to `report.fieldNotes.freeformNotes`
+**Handler:** `updateFieldNotes(value)` saves to report via Supabase
 
 #### Photos Section (Minimal)
 
@@ -136,7 +141,7 @@ Expandable section cards for structured input:
 | `weather-precip` | Display | Precipitation |
 | `site-conditions-input` | textarea | Manual site conditions description |
 
-**Data Path:** `report.overview.weather.jobSiteCondition`
+**Data Path:** Saved to Supabase `report_raw_capture.site_conditions`
 
 #### 2. Work Summary
 
@@ -146,7 +151,7 @@ Expandable section cards for structured input:
 |----------------|------------|---------------|
 | `work-summary-input` | textarea | Consolidated work performed description |
 
-**Handler:** `updateWorkSummary(value)` saves to `report.guidedNotes.workSummary`
+**Handler:** `updateWorkSummary(value)` saves to Supabase `report_raw_capture.work_summary`
 
 **Note:** This is a simplified single-textarea approach. The AI extracts per-contractor details from this summary during processing.
 
@@ -161,7 +166,7 @@ Expandable section cards for structured input:
 | `issues-list` | Container | List of added issues |
 | Add button | button | `addIssue()` handler |
 
-**Data Path:** `report.generalIssues[]` (array of strings)
+**Data Path:** Saved to Supabase as part of report data
 
 **Functions:**
 - `addIssue()` - Adds issue to array
@@ -180,10 +185,7 @@ Expandable section cards for structured input:
 | `safety-list` | Container | List of safety notes |
 | Add button | button | `addSafetyNote()` handler |
 
-**Data Paths:**
-- `report.safety.noIncidents` (boolean)
-- `report.safety.hasIncidents` (boolean)
-- `report.safety.notes[]` (array of strings)
+**Data Paths:** Saved to Supabase as part of report data
 
 **Functions:**
 - `addSafetyNote()` - Adds note to array
@@ -204,7 +206,7 @@ Expandable section cards for structured input:
 | `noWork-{contractorId}` | checkbox | "No work performed" flag |
 | `narrative-{contractorId}` | textarea | Work narrative description |
 
-**Data Path:** `report.activities[]` (per-contractor activity objects)
+**Data Path:** Saved to Supabase `report_contractor_work` table
 
 **Functions:**
 - `renderContractorWorkCards()` - Renders contractor cards from active project
@@ -229,7 +231,7 @@ Expandable section cards for structured input:
 | `equip-status-{equipmentId}` | select | Hours utilized (IDLE or 1-10 hours) |
 | `equip-qty-{equipmentId}` | number | Equipment quantity |
 
-**Data Path:** `report.equipment[]` (per-equipment status objects)
+**Data Path:** Saved to Supabase `report_equipment_usage` table
 
 **Functions:**
 - `renderEquipmentCards()` - Renders equipment cards from active project
@@ -275,8 +277,7 @@ Expandable section cards for structured input:
 5. Compresses image (max 1200px width, 70% quality)
 6. If storage low, re-compresses (max 800px width, 50% quality)
 7. Captures timestamp at upload time
-
----
+8. Saves to Supabase `report_photos` table
 
 ---
 
@@ -286,7 +287,7 @@ Expandable section cards for structured input:
 
 **Container ID:** `addContractorModal`
 
-Allows users to add new contractors during the interview process. New contractors are saved to the active project in localStorage.
+Allows users to add new contractors during the interview process. New contractors are saved to the active project in Supabase.
 
 | Field ID | Input Type | Required | Validation |
 |----------|------------|----------|------------|
@@ -303,9 +304,9 @@ Allows users to add new contractors during the interview process. New contractor
 **Save Behavior:**
 1. Generates unique ID: `contractor_{timestamp}_{random}`
 2. Adds contractor to `activeProject.contractors[]`
-3. Updates `fvp_projects` in localStorage
-4. Initializes empty activity object in `report.activities[]`
-5. Initializes empty operations object in `report.operations[]`
+3. Updates project in Supabase `projects` table
+4. Initializes empty activity object in `report_contractor_work`
+5. Initializes empty operations object in `report_personnel`
 6. Re-renders Contractor Work, Personnel, and Equipment sections
 7. Shows success toast notification
 
@@ -331,8 +332,8 @@ Allows users to add new equipment during the interview process. Equipment is sav
 1. Generates unique ID: `equip_{timestamp}_{random}`
 2. **Duplicate Detection:** Checks if same type/model/contractor exists in project
 3. If not duplicate, adds to `activeProject.equipment[]`
-4. Updates `fvp_projects` in localStorage
-5. Adds equipment entry to `report.equipment[]` with quantity and null hours
+4. Updates project in Supabase `projects` table
+5. Adds equipment entry to `report_equipment_usage` table with quantity and null hours
 6. Re-renders Equipment section
 7. Shows success toast (includes "already in project config" note if duplicate)
 
@@ -347,59 +348,122 @@ const isDuplicate = existingEquipment.some(e =>
 
 ---
 
-## Additional Data Sections (In Report Structure)
+## Supabase Storage
 
-The following fields exist in the report data structure and are populated by AI processing, but are NOT directly captured in the simplified quick-interview UI:
+### Reports Table
 
-### Per-Contractor Activities (AI-Populated)
+```sql
+CREATE TABLE reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID REFERENCES projects(id),
+  report_date DATE NOT NULL,
+  status TEXT DEFAULT 'draft',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `report.activities[].contractorId` | string | Contractor UUID |
-| `report.activities[].noWork` | boolean | No work performed flag |
-| `report.activities[].narrative` | string | Work description |
-| `report.activities[].equipmentUsed` | string | Equipment summary |
-| `report.activities[].crew` | string | Crew summary |
+### Report Raw Capture Table
 
-### Personnel/Operations (AI-Populated)
+```sql
+CREATE TABLE report_raw_capture (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  transcript TEXT,
+  guided_notes JSONB,
+  site_conditions TEXT,
+  work_summary TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `report.operations[].contractorId` | string | Contractor UUID |
-| `report.operations[].superintendents` | number | Count |
-| `report.operations[].foremen` | number | Count |
-| `report.operations[].operators` | number | Count |
-| `report.operations[].laborers` | number | Count |
-| `report.operations[].surveyors` | number | Count |
-| `report.operations[].others` | number | Count |
+### Report Contractor Work Table
 
-### Equipment Status (AI-Populated)
+```sql
+CREATE TABLE report_contractor_work (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  contractor_id UUID,
+  contractor_name TEXT,
+  no_work BOOLEAN DEFAULT false,
+  narrative TEXT,
+  equipment_used TEXT,
+  crew TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `report.equipment[].equipmentId` | string | Equipment UUID |
-| `report.equipment[].contractorId` | string | Contractor UUID |
-| `report.equipment[].hoursUtilized` | number/null | Hours used (null = IDLE) |
-| `report.equipment[].quantity` | number | Equipment count |
+### Report Personnel Table
 
-### Other Fields (AI-Populated)
+```sql
+CREATE TABLE report_personnel (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  contractor_id UUID,
+  contractor_name TEXT,
+  superintendents INTEGER DEFAULT 0,
+  foremen INTEGER DEFAULT 0,
+  operators INTEGER DEFAULT 0,
+  laborers INTEGER DEFAULT 0,
+  surveyors INTEGER DEFAULT 0,
+  others INTEGER DEFAULT 0,
+  total INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `report.qaqcNotes[]` | array | QA/QC inspection notes |
-| `report.contractorCommunications` | string | Communications with contractor |
-| `report.visitorsRemarks` | string | Visitors, deliveries, remarks |
-| `report.additionalNotes` | string | Additional notes |
+### Report Equipment Usage Table
+
+```sql
+CREATE TABLE report_equipment_usage (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  equipment_id UUID,
+  equipment_type TEXT,
+  equipment_model TEXT,
+  contractor_id UUID,
+  contractor_name TEXT,
+  hours_utilized INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Report Photos Table
+
+```sql
+CREATE TABLE report_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  photo_data TEXT,
+  caption TEXT,
+  gps_lat NUMERIC,
+  gps_lng NUMERIC,
+  gps_accuracy INTEGER,
+  timestamp TIMESTAMPTZ,
+  original_filename TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Local Storage Keys (Device-Specific)
+
+| Key | Description |
+|-----|-------------|
+| `fvp_active_project` | Active project ID |
+| `fvp_mic_granted` | Microphone permission status |
+| `fvp_loc_granted` | Location permission status |
+| `fvp_dictation_hint_dismissed` | Hint banner dismissed flag |
+| `permissions_dismissed` | Permissions modal dismissed flag |
 
 ---
 
 ## Webhook Request Payload
 
-The `buildProcessPayload()` function (line 1046) constructs the payload sent to n8n:
+The `buildProcessPayload()` function constructs the payload sent to n8n:
 
 ```json
 {
-  "reportId": "fieldvoice_report_[projectId]_YYYY-MM-DD",
+  "reportId": "uuid-from-supabase",
   "captureMode": "minimal" | "guided",
 
   "projectContext": {
@@ -476,14 +540,14 @@ The `buildProcessPayload()` function (line 1046) constructs the payload sent to 
 
 | Field | Type | Source | Notes |
 |-------|------|--------|-------|
-| `reportId` | string | Generated | Format: `fieldvoice_report_[projectId]_YYYY-MM-DD` |
-| `captureMode` | string | `report.meta.captureMode` | "minimal" or "guided" |
-| `projectContext` | object | Active project config | From localStorage `fvp_active_project` |
+| `reportId` | string | Supabase report ID | UUID from reports table |
+| `captureMode` | string | Report metadata | "minimal" or "guided" |
+| `projectContext` | object | Active project config | From Supabase `projects` table |
 | `fieldNotes` | object | Varies by mode | See below |
-| `weather` | object | `report.overview.weather` | Auto-fetched + manual input |
-| `photos` | array | `report.photos[]` | Photo URLs excluded (only metadata) |
-| `reportDate` | string | `report.overview.date` | Formatted date |
-| `inspectorName` | string | `report.overview?.completedBy` | Currently not populated by quick-interview.html (empty string) |
+| `weather` | object | Report weather data | Auto-fetched + manual input |
+| `photos` | array | Report photos | Photo URLs excluded (only metadata) |
+| `reportDate` | string | Report date | Formatted date |
+| `inspectorName` | string | User profile | From Supabase `user_profiles` table |
 
 ### fieldNotes by Capture Mode
 
@@ -502,101 +566,6 @@ The `buildProcessPayload()` function (line 1046) constructs the payload sent to 
   "safety": "No incidents reported" | "INCIDENT REPORTED: [notes joined with ;]"
 }
 ```
-
-**Note:** In guided mode, `issues` and `safety` are computed at submission time by `finishReport()`:
-- `issues` = `report.generalIssues.join('\n')`
-- `safety` = `"No incidents reported"` if `noIncidents` is true, otherwise `"INCIDENT REPORTED: "` + notes joined with `"; "`
-
----
-
-## Data Stored in localStorage
-
-### Storage Key Patterns
-
-| Key Pattern | Description |
-|-------------|-------------|
-| `fieldvoice_report_[projectId]_YYYY-MM-DD` | Project-specific daily report |
-| `fieldvoice_report_YYYY-MM-DD` | Legacy date-only key (no project) |
-| `fieldvoice_report` | Most recent report (backward compatibility) |
-
-### Report Structure in localStorage
-
-```json
-{
-  "meta": {
-    "createdAt": "2024-01-15T08:00:00.000Z",
-    "interviewCompleted": false,
-    "version": 2,
-    "naMarked": {},
-    "captureMode": null
-  },
-
-  "reporter": {
-    "name": ""
-  },
-
-  "project": {
-    "name": "",
-    "dayNumber": null
-  },
-
-  "overview": {
-    "projectName": "",
-    "date": "1/15/2024",
-    "startTime": "7:00 AM",
-    "weather": {
-      "highTemp": "--",
-      "lowTemp": "--",
-      "precipitation": "0.00\"",
-      "generalCondition": "Syncing...",
-      "jobSiteCondition": "",
-      "adverseConditions": "N/A"
-    }
-  },
-
-  "fieldNotes": {
-    "freeformNotes": ""
-  },
-
-  "guidedNotes": {
-    "workSummary": ""
-  },
-
-  "contractors": [],
-  "activities": [],
-  "operations": [],
-  "equipment": [],
-  "generalIssues": [],
-  "qaqcNotes": [],
-
-  "safety": {
-    "hasIncidents": false,
-    "noIncidents": false,
-    "notes": []
-  },
-
-  "contractorCommunications": "",
-  "visitorsRemarks": "",
-  "additionalNotes": "",
-
-  "photos": [],
-
-  "aiGenerated": { ... }
-}
-```
-
-**Note:** The `guidedNotes.issues` and `guidedNotes.safety` fields are populated by the `finishReport()` function just before sending to the webhook, not stored directly during capture. The `meta.captureMode` is `null` until the user selects a mode.
-
-### Other localStorage Keys
-
-| Key | Description |
-|-----|-------------|
-| `fvp_projects` | Array of project configurations |
-| `fvp_active_project` | Active project ID |
-| `fvp_mic_granted` | Microphone permission status |
-| `fvp_loc_granted` | Location permission status |
-| `fvp_dictation_hint_dismissed` | Hint banner dismissed flag |
-| `permissions_dismissed` | Permissions modal dismissed flag |
 
 ---
 
@@ -695,20 +664,65 @@ The `callProcessWebhook()` function validates the response:
    - `qaqcNotes: []`
    - `safety: { hasIncidents: false, noIncidents: true, notes: '' }`
 
+### Response Storage
+
+AI response is saved to Supabase `report_ai_response` table:
+
+```sql
+INSERT INTO report_ai_response (
+  report_id,
+  ai_generated_content,
+  model_used,
+  processing_time_ms,
+  received_at
+) VALUES (
+  'report-uuid',
+  '{"activities": [...], ...}',
+  'n8n-fieldvoice-refine',
+  1234,
+  NOW()
+);
+```
+
 ---
 
 ## Status Flow
 
 | Status | Description | UI Behavior |
 |--------|-------------|-------------|
-| `null/undefined` | Fresh report | Mode selection shown |
+| `draft` | Fresh or in-progress report | Mode selection or capture UI shown |
 | `pending_refine` | Offline or webhook failed | Queued for retry |
 | `refined` | AI processing complete | Ready for report.html |
 
 ### Offline Handling
 
 When offline or webhook fails:
-1. Payload added to `report.meta.offlineQueue[]`
-2. Status set to `pending_refine`
-3. Toast: "You're offline - AI processing will complete when connected"
-4. User redirected to report.html
+1. Report saved to Supabase with status `pending_refine`
+2. Toast: "You're offline - AI processing will complete when connected"
+3. User redirected to report.html
+4. Retry banner shown when online
+
+---
+
+## Error Handling
+
+### Network Errors
+- Toast notification for connection failures
+- Data saved locally as fallback
+- Retry option when connection restored
+
+### Validation Errors
+- Required fields highlighted in red
+- Toast message explaining what's missing
+- Form submission blocked until resolved
+
+### Supabase Errors
+- Logged to console
+- User-friendly toast message
+- Graceful degradation when possible
+
+### Photo Processing Errors
+- File type validation
+- Size limit enforcement (20MB max)
+- Compression fallback for large images
+- GPS unavailable handling

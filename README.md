@@ -2,7 +2,7 @@
 
 ## Overview
 
-**FieldVoice Pro** is a mobile-optimized web application designed for construction field documentation. It enables Resident Project Representatives (RPRs), field engineers, and inspectors to quickly document daily work activities using native device dictation, generating professional DOT-compliant reports.
+**FieldVoice Pro** is a mobile-optimized Progressive Web Application (PWA) designed for construction field documentation. It enables Resident Project Representatives (RPRs), field engineers, and inspectors to quickly document daily work activities using native device dictation, generating professional DOT-compliant reports.
 
 ### Primary Use Case
 - **Target Users**: Construction inspectors, Resident Project Representatives (RPRs), field engineers
@@ -15,22 +15,29 @@
 - GPS-verified, timestamped reports for legal protection
 - Optimized for mobile field use with native keyboard dictation support
 - Automated project setup via document import from existing reports
+- Multi-device sync via cloud storage
 
 ---
 
 ## Technology Stack
 
-### Frontend (100% Client-Side)
+### Frontend
 | Technology | Purpose | Version/Source |
 |------------|---------|----------------|
 | **Tailwind CSS** | Utility-first CSS framework | CDN (`cdn.tailwindcss.com`) |
 | **Font Awesome** | Icon library | v6.4.0 CDN |
 | **Vanilla JavaScript** | Core application logic | ES6+ |
 
+### Backend & Storage
+| Service | Purpose | Notes |
+|---------|---------|-------|
+| **Supabase** | PostgreSQL database, authentication, real-time sync | Cloud-hosted at `ruzadotbgkjhgwkvotlz.supabase.co` |
+
 ### External APIs & Services
 | Service | Purpose | Authentication |
 |---------|---------|----------------|
 | **Open-Meteo API** | Real-time weather data | None (free, no key required) |
+| **n8n Webhooks** | AI text refinement, document extraction | HTTPS endpoints |
 
 ### Browser APIs Used
 | API | Purpose |
@@ -38,16 +45,17 @@
 | MediaDevices API | Camera access |
 | Geolocation API | GPS coordinates for photos/weather |
 | Canvas API | Image compression |
-| localStorage | Client-side data persistence |
+| localStorage | Device-specific state (active project, permission flags) |
 | Service Worker API | Offline caching and PWA support |
 | FileReader API | Document import and image handling |
 | Drag and Drop API | File upload for document import |
 
 ### Architecture
-- **Type**: Static Single Page Application (SPA)
-- **Backend**: None - fully client-side
-- **Database**: Browser localStorage only
-- **Deployment**: Any static web server (HTTPS required for media APIs)
+- **Type**: Progressive Web Application (PWA) with cloud backend
+- **Backend**: Supabase (PostgreSQL + real-time subscriptions)
+- **Database**: Supabase tables (see Data Model section)
+- **Local Storage**: Device-specific preferences only
+- **Deployment**: Static web server (HTTPS required for media APIs)
 
 ---
 
@@ -85,6 +93,11 @@
 │   ├── icon-192x192.png
 │   ├── icon-384x384.png
 │   └── icon-512x512.png
+├── docs/                   # Technical documentation
+│   ├── project-config-spec.md
+│   ├── quick-interview-spec.md
+│   ├── report-page-spec.md
+│   └── finalreview-spec.md
 └── README.md               # This documentation file
 ```
 
@@ -92,251 +105,195 @@
 
 | Page | Lines | Purpose |
 |------|-------|---------|
-| `index.html` | ~931 | Dashboard with project selection, active project display, weather, and navigation |
-| `quick-interview.html` | ~3,175 | DOT-compliant report with dual capture modes (Quick Notes minimal or Guided Sections), 12 expandable sections, auto-expanding textareas, contractor-based work entry |
-| `report.html` | ~1,881 | AI-populated editable DOT form with Form View and Original Notes tabs, Final Review navigation |
-| `finalreview.html` | ~650 | Read-only DOT RPR Daily Report viewer matching official DOT format with 4+ page layout, print-optimized CSS, contractor-based work summary, operations/equipment tables, and photo grid |
-| `archives.html` | ~491 | Report history with swipe-to-delete, date-sorted report list, view finalized reports |
-| `editor.html` | ~741 | Photo capture with GPS embedding, full-size photo cards with orientation handling, editable captions |
+| `index.html` | ~981 | Dashboard with project selection, active project display, weather, and navigation |
+| `quick-interview.html` | ~3,961 | DOT-compliant report with dual capture modes (Quick Notes minimal or Guided Sections), 12 expandable sections, auto-expanding textareas, contractor-based work entry |
+| `report.html` | ~3,254 | AI-populated editable DOT form with Form View and Original Notes tabs, Final Review navigation |
+| `finalreview.html` | ~2,323 | Read-only DOT RPR Daily Report viewer matching official DOT format with 4+ page layout, print-optimized CSS, contractor-based work summary, operations/equipment tables, and photo grid |
+| `archives.html` | ~546 | Report history with swipe-to-delete, date-sorted report list, view finalized reports |
+| `editor.html` | ~1,109 | Photo capture with GPS embedding, full-size photo cards with orientation handling, editable captions |
 | `permissions.html` | ~1,596 | Permission testing (mic, camera, GPS), iOS-specific instructions for native dictation |
 | `permission-debug.html` | ~1,074 | Debugging utility for troubleshooting permission issues |
-| `project-config.html` | ~1,581 | Project management with document import, contractor roster, equipment inventory, and contract details |
-| `settings.html` | ~478 | Inspector profile - personal information, title, company, signature preview, and app refresh |
+| `project-config.html` | ~2,106 | Project management with document import, contractor roster, equipment inventory, and contract details |
+| `settings.html` | ~538 | Inspector profile - personal information, title, company, signature preview, and app refresh |
 | `landing.html` | ~1,560 | Marketing page with feature overview and onboarding |
 
 ---
 
 ## Data Model
 
-### Project Data Structure (localStorage: `fvp_projects`)
+### Supabase Tables
 
-```javascript
-// Array of project configurations
-[
-  {
-    id: "proj_1705234567890",           // Unique project ID
-    projectName: "I-10 Bridge Reconstruction",
-    noabProjectNo: "1291",
-    cnoSolicitationNo: "N/A",
-    location: "Jefferson Highway at Mississippi River",
-    engineer: "AECOM",
-    primeContractor: "Boh Bros Construction",
-    noticeToProceed: "2025-01-15",       // ISO date
-    contractDuration: 467,                // Days
-    weatherDays: 0,
-    expectedCompletion: "2026-04-25",    // ISO date
-    defaultStartTime: "06:00",
-    defaultEndTime: "16:00",
+FieldVoice Pro uses Supabase for cloud storage, enabling multi-device sync and persistent data storage.
 
-    // Contractor roster
-    contractors: [
-      {
-        id: "cont_1705234567891",
-        name: "Boh Bros Construction",
-        abbreviation: "BOH",
-        type: "prime",                   // "prime" or "subcontractor"
-        trades: ["General", "Pile Driving"]
-      },
-      {
-        id: "cont_1705234567892",
-        name: "Delta Concrete",
-        abbreviation: "DELTA",
-        type: "subcontractor",
-        trades: ["Concrete"]
-      }
-    ],
+#### User Profiles Table (`user_profiles`)
 
-    // Equipment inventory per contractor
-    equipment: [
-      {
-        id: "equip_1705234567893",
-        contractorId: "cont_1705234567891",
-        type: "Excavator",
-        model: "CAT 336"
-      }
-    ],
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | User identifier |
+| `full_name` | text | Inspector's full name |
+| `title` | text | Job title (e.g., "RPR") |
+| `company` | text | Company/firm name |
+| `email` | text | Email address (optional) |
+| `phone` | text | Phone number (optional) |
+| `created_at` | timestamp | Record creation time |
+| `updated_at` | timestamp | Last update time |
 
-    createdAt: "2025-01-14T08:00:00.000Z",
-    updatedAt: "2025-01-14T08:00:00.000Z"
-  }
-]
-```
+#### Projects Table (`projects`)
 
-### User Settings Structure (localStorage: `fvp_user_settings`)
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Project identifier |
+| `project_name` | text | Project name |
+| `noab_project_no` | text | NOAB project number |
+| `cno_solicitation_no` | text | CNO solicitation number |
+| `location` | text | Project location |
+| `engineer` | text | Engineering firm |
+| `prime_contractor` | text | Prime contractor name |
+| `notice_to_proceed` | date | Contract start date |
+| `contract_duration` | integer | Duration in days |
+| `weather_days` | integer | Accumulated weather days |
+| `expected_completion` | date | Expected completion date |
+| `default_start_time` | time | Default shift start |
+| `default_end_time` | time | Default shift end |
+| `logo` | bytea | Project logo (base64) |
+| `contractors` | jsonb | Array of contractor objects |
+| `equipment` | jsonb | Array of equipment objects |
+| `status` | text | "active" or "archived" |
+| `created_at` | timestamp | Record creation time |
+| `updated_at` | timestamp | Last update time |
 
-```javascript
-{
-  inspectorName: "Andrew Stiebing",       // Required
-  title: "RPR",                           // Required - Resident Project Representative
-  company: "Burns & McDonnell",           // Required
-  email: "astiebing@burnsmcd.com",        // Optional
-  phone: "(504) 555-1234"                 // Optional
-}
-// Generates signature: "Andrew Stiebing, RPR (Burns & McDonnell)"
-```
+#### Reports Table (`reports`)
 
-### Report Data Structure (localStorage: `fieldvoice_report_YYYY-MM-DD`)
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Report identifier |
+| `project_id` | UUID (FK) | Reference to projects table |
+| `report_date` | date | Date of the report |
+| `status` | text | "draft", "submitted", or "finalized" |
+| `created_at` | timestamp | Record creation time |
+| `updated_at` | timestamp | Last update time |
 
-```javascript
-{
-  // Metadata
-  meta: {
-    createdAt: "2025-01-14T08:00:00.000Z",  // ISO timestamp
-    interviewCompleted: false,               // Report finalization status
-    reportType: "quick" | "full",            // Report type selected
-    currentStep: 0,                          // Progress tracking
-    version: 2,                              // Schema version
-    naMarked: {                              // Sections marked as "Not Applicable"
-      issues: false,
-      inspections: false,
-      contractorCommunications: false,
-      visitorsRemarks: false,
-      photos: false
-    }
-  },
+#### Report Raw Capture (`report_raw_capture`)
 
-  // Project Overview (auto-populated from active project)
-  overview: {
-    projectName: "I-10 Bridge Reconstruction",
-    noabProjectNo: "1291",
-    cnoSolicitationNo: "N/A",
-    date: "1/14/2025",
-    startTime: "6:00 AM",
-    endTime: "4:00 PM",
-    shiftDuration: "10.00 hours",
-    location: "Jefferson Highway at Mississippi River",
-    engineer: "AECOM",
-    contractor: "Boh Bros Construction",
-    noticeToProceed: "1/15/2025",
-    contractDuration: "467 days",
-    expectedCompletion: "4/25/2026",
-    contractDayNo: "Day 1 of 467",
-    weatherDays: "0 days",
-    completedBy: "Andrew Stiebing, RPR (Burns & McDonnell)",
-    weather: {
-      highTemp: "78°F",
-      lowTemp: "62°F",
-      precipitation: "0.00\"",
-      generalCondition: "Partly Cloudy",  // From Open-Meteo API
-      jobSiteCondition: "Dry",            // User input: "Dry" or "Wet"
-      adverseConditions: "N/A"
-    }
-  },
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `transcript` | text | Minimal mode notes |
+| `guided_notes` | jsonb | Guided mode section data |
+| `site_conditions` | text | Site conditions description |
+| `work_summary` | text | Work summary text |
+| `created_at` | timestamp | Record creation time |
 
-  // Contractor-based work activities (NEW FORMAT)
-  activities: [
-    {
-      contractorId: "cont_1705234567891",
-      noWork: false,                      // True if "No work performed" checked
-      narrative: "Continued pile driving operations at Bent 4...",
-      equipmentUsed: "Crane (1); Pile Driver (1)",
-      crew: "Operator (2); Laborer (4)"
-    },
-    {
-      contractorId: "cont_1705234567892",
-      noWork: true,                       // No work performed today
-      narrative: "",
-      equipmentUsed: "",
-      crew: ""
-    }
-  ],
+#### Report Contractor Work (`report_contractor_work`)
 
-  // Personnel/Operations tracking (DOT-compliant columns)
-  operations: [
-    {
-      contractorId: "cont_1705234567891",
-      superintendents: 1,
-      foremen: 2,
-      operators: 4,
-      laborers: 6,
-      surveyors: 0,
-      others: 0
-      // Total calculated automatically
-    }
-  ],
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `contractor_id` | UUID | Contractor identifier |
+| `contractor_name` | text | Contractor name |
+| `no_work` | boolean | No work performed flag |
+| `narrative` | text | Work description |
+| `equipment_used` | text | Equipment used |
+| `crew` | text | Crew description |
+| `created_at` | timestamp | Record creation time |
 
-  // Equipment status tracking
-  equipment: [
-    {
-      equipmentId: "equip_1705234567893",
-      contractorId: "cont_1705234567891",
-      hoursUtilized: 8                    // 0 = IDLE, 1-10 = hours utilized
-    }
-  ],
+#### Report Personnel (`report_personnel`)
 
-  // Issues and delays
-  generalIssues: [
-    "Utility conflict at Station 45+00 requiring redesign"
-  ],
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `contractor_id` | UUID | Contractor identifier |
+| `contractor_name` | text | Contractor name |
+| `superintendents` | integer | Count |
+| `foremen` | integer | Count |
+| `operators` | integer | Count |
+| `laborers` | integer | Count |
+| `surveyors` | integer | Count |
+| `others` | integer | Count |
+| `total` | integer | Calculated total |
+| `created_at` | timestamp | Record creation time |
 
-  // QA/QC inspections and testing
-  qaqcNotes: [
-    "Concrete cylinders cast for barrier wall pour"
-  ],
+#### Report Equipment Usage (`report_equipment_usage`)
 
-  // Safety information
-  safety: {
-    hasIncidents: false,      // Incident occurred today
-    noIncidents: true,        // Explicitly confirmed no incidents
-    notes: [
-      "Toolbox talk conducted: Heat stress awareness"
-    ]
-  },
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `equipment_id` | UUID | Equipment identifier |
+| `equipment_type` | text | Equipment type |
+| `equipment_model` | text | Equipment model |
+| `contractor_id` | UUID | Contractor identifier |
+| `contractor_name` | text | Contractor name |
+| `hours_utilized` | integer | Hours used (0-10) |
+| `created_at` | timestamp | Record creation time |
 
-  // Contractor communications (NEW - separate section)
-  contractorCommunications: "Discussed schedule acceleration with BOH superintendent...",
+#### Report Photos (`report_photos`)
 
-  // Visitors, deliveries, remarks (NEW - separate section, string format)
-  visitorsRemarks: "DOT inspector on site 10:00 AM - 2:00 PM. Material delivery: 500 LF of 24\" pipe.",
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `photo_data` | text | Base64 encoded image |
+| `caption` | text | Photo caption |
+| `gps_lat` | numeric | GPS latitude |
+| `gps_lng` | numeric | GPS longitude |
+| `gps_accuracy` | integer | GPS accuracy in meters |
+| `timestamp` | timestamp | Photo timestamp |
+| `original_filename` | text | Original file name |
+| `created_at` | timestamp | Record creation time |
 
-  // Photo documentation
-  photos: [
-    {
-      id: "photo_1705234567890_0",
-      url: "data:image/jpeg;base64,...",  // Compressed base64 image
-      caption: "",
-      timestamp: "2025-01-14T14:30:00.000Z",
-      date: "1/14/2025",
-      time: "2:30:00 PM",
-      gps: {
-        lat: 29.9934,
-        lng: -90.2580,
-        accuracy: 10  // meters
-      },
-      fileName: "IMG_1234.jpg",
-      fileSize: 2500000,
-      fileType: "image/jpeg"
-    }
-  ],
+#### Report AI Response (`report_ai_response`)
 
-  // AI-generated content (populated by AI processing webhook)
-  aiGenerated: {
-    weather: "Site conditions were dry with partly cloudy skies...",
-    activities: "The contractor continued earthwork operations...",
-    issues: "A utility conflict was identified at Station 45+00...",
-    inspections: "Quality control testing included casting of concrete cylinders...",
-    safety: "No safety incidents were reported. A toolbox talk on heat stress...",
-    contractorCommunications: "Coordination meeting held with prime contractor...",
-    visitors: "DOT representative conducted a site inspection..."
-  }
-}
-```
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `ai_generated_content` | jsonb | All AI-generated sections |
+| `model_used` | text | AI model identifier |
+| `processing_time_ms` | integer | Processing time |
+| `received_at` | timestamp | Response timestamp |
+| `created_at` | timestamp | Record creation time |
 
-### localStorage Keys
+#### Report User Edits (`report_user_edits`)
 
-| Key Pattern | Purpose |
-|-------------|---------|
-| `fieldvoice_report_YYYY-MM-DD` | Primary storage for date-specific reports |
-| `fieldvoice_report` | Legacy/backup key for compatibility |
-| `fvp_projects` | Array of saved project configurations |
-| `fvp_active_project` | ID of currently active project |
-| `fvp_user_settings` | User's personal inspector profile (name, title, company) |
-| `fvp_settings` | Legacy settings key (deprecated, migrated to above) |
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `field_path` | text | Path to edited field |
+| `original_value` | text | Original value |
+| `edited_value` | text | User-edited value |
+| `edited_at` | timestamp | Edit timestamp |
+| `created_at` | timestamp | Record creation time |
+
+#### Report Final (`report_final`)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | UUID (PK) | Record identifier |
+| `report_id` | UUID (FK) | Reference to reports table |
+| `final_content` | jsonb | Complete finalized report |
+| `signature` | text | Digital signature |
+| `status` | text | "submitted" or "archived" |
+| `submitted_at` | timestamp | Submission timestamp |
+| `created_at` | timestamp | Record creation time |
+
+### Local Storage Keys (Device-Specific)
+
+These keys remain in localStorage for device-specific state:
+
+| Key | Purpose |
+|-----|---------|
+| `fvp_active_project` | ID of currently active project on this device |
 | `fvp_mic_granted` | Microphone permission status flag |
 | `fvp_loc_granted` | Location permission status flag |
 | `fvp_onboarded` | First-time onboarding completed flag |
 | `fvp_banner_dismissed` | Permission warning banner dismissed |
 | `fvp_banner_dismissed_date` | Timestamp of banner dismissal (24hr reset) |
+| `fvp_dictation_hint_dismissed` | Dictation hint dismissed flag |
 
 ---
 
@@ -353,7 +310,7 @@
      │    ├─► No projects? ─► Prompt to create project ─► [project-config.html]
      │    └─► Has project: Show active project card with name/number
      │
-     ├─► Check for existing report
+     ├─► Check for existing report (from Supabase)
      │    ├─► No report: Show "Begin Daily Report" button
      │    ├─► In progress: Show progress bar, "Continue" button
      │    └─► Completed: Show "View Report" / "Edit" options
@@ -361,7 +318,7 @@
      └─► User clicks "Begin Daily Report"
           │
           ├─► Project picker modal appears
-          │    ├─► Shows all saved projects
+          │    ├─► Shows all saved projects (from Supabase)
           │    ├─► Highlights currently active project
           │    └─► "Manage Projects" link to project-config.html
           │
@@ -373,7 +330,7 @@
 ```
 [project-config.html] Project Management
      │
-     ├─► View saved projects list
+     ├─► View saved projects list (from Supabase)
      │    ├─► Active project highlighted with checkmark
      │    └─► Each project shows name, number, location
      │
@@ -392,7 +349,7 @@
      │    └─► Review and save extracted project
      │
      ├─► Edit existing project
-     │    └─► All fields editable, changes saved automatically
+     │    └─► All fields editable, changes saved to Supabase
      │
      └─► Set active project
           └─► Selected project used for new reports
@@ -441,7 +398,7 @@
      │    └─► Add additional contractors/equipment as needed
      │
      └─► Save Project
-          └─► Project saved and ready for daily reports
+          └─► Project saved to Supabase and ready for daily reports
 ```
 
 ### 4. Interview/Documentation Flow
@@ -449,7 +406,7 @@
 ```
 [quick-interview.html]
      │
-     ├─► Load contractors/equipment from active project
+     ├─► Load contractors/equipment from active project (Supabase)
      │
      ├─► Choose capture mode (toggle at top):
      │    ├─► "Quick Notes" (Minimal Mode):
@@ -465,7 +422,7 @@
      │    ├─► Contractor Work (per-contractor cards)
      │    │    ├─► "No work performed" checkbox
      │    │    ├─► Work narrative textarea (auto-expanding)
-     │    │    ├─► Equipment used input
+     │    │    ├─► "Add Contractor" button for on-the-fly additions
      │    │    └─► Crew input (role/quantity)
      │    ├─► Personnel/Operations (DOT columns)
      │    │    ├─► Superintendent(s), Foreman, Operators
@@ -474,7 +431,8 @@
      │    ├─► Equipment Status
      │    │    ├─► Per-equipment status dropdown
      │    │    ├─► IDLE or 1-10 hours utilized
-     │    │    └─► "Mark All IDLE" quick action
+     │    │    ├─► "Mark All IDLE" quick action
+     │    │    └─► "Add Equipment" button for on-the-fly additions
      │    ├─► Issues & Delays
      │    ├─► QA/QC Inspections
      │    ├─► Safety
@@ -526,7 +484,7 @@ User clicks "Finish" in quick-interview.html
      ├─► Webhook call to n8n (fieldvoice-refine):
      │    ├─► Send field notes, weather, photos metadata, project context
      │    ├─► n8n workflow processes and returns AI-generated content
-     │    └─► Store result in report.aiGenerated
+     │    └─► Store result in Supabase report_ai_response table
      │
      ├─► AI Processing Rules (enforced by n8n workflow):
      │    ├─► Never invent or add information
@@ -536,7 +494,7 @@ User clicks "Finish" in quick-interview.html
      │    └─► Highlight safety concerns appropriately
      │
      ├─► Offline handling:
-     │    ├─► Queue processing request in offlineQueue
+     │    ├─► Queue processing request
      │    ├─► Set status to 'pending_refine'
      │    └─► Show retry banner on report.html when online
      │
@@ -546,14 +504,14 @@ User clicks "Finish" in quick-interview.html
 ### 7. Report Generation Flow
 
 ```
-[report.html] Loaded with report data
+[report.html] Loaded with report data from Supabase
      │
      ├─► Tab toggle: "Form View" | "Original Notes"
      │
      ├─► Form View (default):
      │    ├─► Data priority: userEdits > aiGenerated > fieldNotes > defaults
      │    ├─► Editable DOT-format form fields
-     │    └─► Changes saved as userEdits
+     │    └─► Changes saved as userEdits to Supabase
      │
      ├─► Original Notes View:
      │    ├─► Shows raw field capture data
@@ -579,10 +537,12 @@ User clicks "Finish" in quick-interview.html
      │    ├─► Photo documentation
      │    └─► Signature block
      │
+     ├─► Empty field highlighting (red borders for missing data)
+     │
      ├─► Navigation options:
      │    ├─► "Edit Report" ─► back to report.html
      │    ├─► "Export PDF" ─► browser print dialog
-     │    └─► "Cancel Report" ─► delete and return to index.html
+     │    └─► "Submit Report" ─► save to Supabase and archive
      │
      └─► Print CSS ensures proper DOT formatting:
           ├─► Page breaks at correct locations
@@ -604,9 +564,7 @@ User taps photo capture (camera icon)
      │    ├─► Request GPS coordinates (Geolocation API)
      │    ├─► Read file as base64 data URL
      │    ├─► Compress image (max 1200px width, 70% quality JPEG)
-     │    ├─► If storage near limit ─► Try higher compression (800px, 50%)
-     │    ├─► Check localStorage quota
-     │    └─► If quota exceeded ─► Remove oldest photo, warn user
+     │    └─► If storage near limit ─► Try higher compression (800px, 50%)
      │
      ├─► Create photo object with:
      │    ├─► Unique ID (timestamp-based)
@@ -615,16 +573,26 @@ User taps photo capture (camera icon)
      │    ├─► Date/time stamp
      │    └─► Original file metadata
      │
-     └─► Save to report.photos array ─► Update display
+     └─► Save to Supabase report_photos table ─► Update display
 ```
 
 ---
 
 ## Configuration
 
+### Supabase Configuration
+
+Supabase credentials are configured in all HTML files:
+
+```javascript
+const SUPABASE_URL = 'https://ruzadotbgkjhgwkvotlz.supabase.co';
+const SUPABASE_ANON_KEY = 'your-anon-key';
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+```
+
 ### Project Configuration
 
-Project details are configured via `project-config.html` and stored in localStorage under the `fvp_projects` key. Each project includes:
+Project details are configured via `project-config.html` and stored in Supabase `projects` table. Each project includes:
 
 **Project Details:**
 - Project Name
@@ -651,7 +619,7 @@ Project details are configured via `project-config.html` and stored in localStor
 
 ### Inspector Profile
 
-Personal information is configured via `settings.html` (Inspector Profile) and stored under `fvp_user_settings`:
+Personal information is configured via `settings.html` (Inspector Profile) and stored in Supabase `user_profiles` table:
 
 - Inspector Name (required)
 - Title (required) - e.g., RPR
@@ -682,87 +650,17 @@ tailwind.config = {
 
 ### n8n Webhook Configuration
 
-The application uses n8n webhooks for AI text refinement, report submission, and document extraction. Configure webhook URLs in the code:
+The application uses n8n webhooks for AI text refinement and document extraction:
 
 **Webhook Endpoints:**
 | Endpoint | Location | Purpose |
 |----------|----------|---------|
 | **N8N_PROCESS_WEBHOOK** | `quick-interview.html` | AI processing on finish |
-| **N8N_SUBMIT_WEBHOOK** | `report.html` | Submitting completed reports |
 | **EXTRACT_WEBHOOK_URL** | `project-config.html` | Document extraction for project setup |
 
 **Production Webhook URLs (n8n Cloud):**
 - Refine: `https://advidere.app.n8n.cloud/webhook/fieldvoice-refine-v6`
-- Submit: `https://advidere.app.n8n.cloud/webhook/fieldvoice-submit`
 - Extract: `https://advidere.app.n8n.cloud/webhook/fieldvoice-project-extractor`
-
-**Webhook Request Format (Refine):**
-```javascript
-{
-    section: "weather|activities|issues|inspections|safety|visitors|additionalNotes",
-    originalText: "User's original text",
-    reportContext: {
-        projectName: "Project Name",
-        reporterName: "Inspector Name",
-        date: "1/14/2025"
-    }
-}
-```
-
-**Webhook Request Format (Document Extraction):**
-```javascript
-{
-    files: [
-        {
-            name: "RPR_Daily_Report.pdf",
-            type: "application/pdf",
-            content: "base64-encoded-file-content"
-        }
-    ]
-}
-```
-
-**Expected Response (Refine):**
-```javascript
-{
-    refinedText: "Professionally refined text"
-}
-```
-
-**Expected Response (Document Extraction):**
-```javascript
-{
-    success: true,
-    projectName: "I-10 Bridge Reconstruction",
-    noabProjectNo: "1291",
-    cnoSolicitationNo: "N/A",
-    location: "Jefferson Highway at Mississippi River",
-    engineer: "AECOM",
-    primeContractor: "Boh Bros Construction",
-    noticeToProceed: "2025-01-15",      // ISO date format
-    contractDuration: 467,               // Days as number
-    expectedCompletion: "2026-04-25",   // ISO date format
-    defaultStartTime: "06:00",          // 24-hour format
-    defaultEndTime: "16:00",            // 24-hour format
-    weatherDays: 0,
-    contractors: [
-        {
-            name: "Boh Bros Construction",
-            abbreviation: "BOH",
-            type: "prime",
-            trades: "General; Pile Driving"
-        }
-    ],
-    equipment: [
-        {
-            type: "Excavator",
-            model: "CAT 336",
-            contractorName: "Boh Bros Construction"
-        }
-    ],
-    notes: ["Note about extraction uncertainties"]
-}
-```
 
 ---
 
@@ -792,29 +690,32 @@ Android uses Google Voice Typing. Ensure:
 
 ---
 
-## Storage & Limitations
+## Storage & Sync
 
-### localStorage Limits
-- **Typical limit**: 5-10MB per domain
-- **Photo impact**: Each compressed photo ~50-200KB
-- **Report without photos**: ~5-20KB
+### Supabase Benefits
+- **Multi-device sync**: Access reports from any device
+- **Real-time updates**: Multiple users can view same data
+- **Data persistence**: Reports stored permanently in cloud
+- **Backup/audit trail**: Database provides reliable storage
 
-### Storage Management
-- Automatic image compression (1200px → 800px if needed)
-- JPEG quality reduction (70% → 50% if needed)
-- Oldest photo removal when quota exceeded
-- Clear warnings displayed to user
+### Offline Capabilities
 
-### Report History
-- Up to 30 past reports stored
-- Accessed via "Archives" on home dashboard
-- Date-keyed storage prevents conflicts
+| Feature | Offline Support | Notes |
+|---------|-----------------|-------|
+| **App Loading** | Full | All HTML, CSS, JS cached by service worker |
+| **View Cached Reports** | Partial | Previously loaded reports available |
+| **Create Reports** | Limited | Basic capture, sync when online |
+| **Photo Capture** | Full | Photos stored locally until sync |
+| **Weather Sync** | None | Requires internet (shows "Offline" status) |
+| **AI Refinement** | None | Requires internet (queued for retry) |
+| **Report Submission** | None | Requires internet |
+| **Print/PDF Export** | Full | Uses browser print functionality |
 
 ---
 
 ## PWA & Offline Support
 
-FieldVoice Pro is a fully installable Progressive Web App (PWA) that works offline when saved to the home screen on mobile devices.
+FieldVoice Pro is a fully installable Progressive Web App (PWA) that provides offline capabilities when saved to the home screen on mobile devices.
 
 ### Installation
 
@@ -830,19 +731,6 @@ FieldVoice Pro is a fully installable Progressive Web App (PWA) that works offli
 3. Tap "Install app" or "Add to Home Screen"
 4. Confirm installation
 
-### Offline Capabilities
-
-| Feature | Offline Support | Notes |
-|---------|-----------------|-------|
-| **App Loading** | Full | All HTML, CSS, JS cached by service worker |
-| **View Existing Reports** | Full | Reports stored in localStorage |
-| **Create/Edit Reports** | Full | All data saved locally |
-| **Photo Capture** | Full | Photos stored as base64 in localStorage |
-| **Weather Sync** | None | Requires internet (shows "Offline" status) |
-| **AI Refinement** | None | Requires internet (shows error message) |
-| **Report Submission** | None | Requires internet (shows error message) |
-| **Print/PDF Export** | Full | Uses browser print functionality |
-
 ### Service Worker Details
 
 **File:** `sw.js`
@@ -854,18 +742,11 @@ FieldVoice Pro is a fully installable Progressive Web App (PWA) that works offli
 
 **Cache Versioning:**
 ```javascript
-const CACHE_VERSION = 'v1.4.0';
+const CACHE_VERSION = 'v1.5.0';
 const CACHE_NAME = `fieldvoice-pro-${CACHE_VERSION}`;
 ```
 
 To force a cache update, increment the version number in `sw.js`.
-
-**Cached Files:**
-- All 10 HTML files
-- `manifest.json`
-- App icons (192x192, 512x512)
-- Tailwind CSS CDN
-- Font Awesome CSS and webfonts
 
 ### Manifest Configuration
 
@@ -888,12 +769,6 @@ To force a cache update, increment the version number in `sw.js`.
 **Yellow Banner:** A slide-down banner appears at the top of all pages when the device goes offline:
 - Message: "You are offline - Some features may be unavailable"
 - Automatically hides when connection is restored
-- Uses CSS transitions for smooth animation
-
-**Feature-Specific Messages:**
-- Weather sync: Shows "Offline" with wifi-slash icon
-- Report submission: Toast message "You are offline - Please connect to the internet to submit your report"
-- AI refinement: Toast message "You are offline - AI refinement requires internet connection"
 
 ### PWA Meta Tags (All HTML Files)
 
@@ -925,16 +800,6 @@ body {
 }
 ```
 
-### App Icons
-
-Icons are located in `/icons/` with a construction/microphone themed design using the app's color palette:
-- **Navy (#0a1628):** Background
-- **Orange (#ea580c):** Microphone body
-- **Yellow (#f59e0b):** Microphone stand and accents
-- **Green (#16a34a):** Checkmark badge
-
-Available sizes: 72x72, 96x96, 128x128, 144x144, 152x152, 192x192, 384x384, 512x512
-
 ---
 
 ## Error Handling
@@ -951,17 +816,23 @@ Available sizes: 72x72, 96x96, 128x128, 144x144, 152x152, 192x192, 384x384, 512x
 |-------|----------|
 | Camera permission denied | Prompt user to enable in browser/system settings |
 | GPS unavailable | Continue without coordinates, mark as "No GPS" |
-| Storage quota exceeded | Remove oldest photo, try higher compression |
+| Storage quota exceeded | Try higher compression |
 | Invalid file type | Reject with error message |
 
 ### Webhook Errors
 | Scenario | Recovery |
 |----------|----------|
-| Webhook URL not configured | Configure N8N_REFINE_WEBHOOK and N8N_SUBMIT_WEBHOOK in code |
 | Server error (5xx) | Check n8n workflow status, retry |
 | Request timeout (30s) | Check network connection, retry |
 | Invalid response | Verify n8n workflow returns expected JSON format |
-| Network failure | Check internet connection, retry |
+| Network failure | Queue for retry when online |
+
+### Supabase Errors
+| Scenario | Recovery |
+|----------|----------|
+| Connection failed | Show offline banner, queue operations |
+| Authentication error | Re-authenticate user |
+| Rate limit | Exponential backoff retry |
 
 ---
 
@@ -978,14 +849,14 @@ Available sizes: 72x72, 96x96, 128x128, 144x144, 152x152, 192x192, 384x384, 512x
 ### Requirements
 - **HTTPS**: Required for MediaDevices API (camera, microphone)
 - **JavaScript**: Required (no graceful degradation)
-- **localStorage**: Required for data persistence
+- **Cookies/Storage**: Required for Supabase auth
 
 ---
 
 ## Development Notes
 
 ### No Build Process
-This is a static HTML/JS/CSS application with no build tools, bundlers, or package managers. Simply serve the files via any HTTP/HTTPS server.
+This is a static HTML/JS/CSS application with no build tools, bundlers, or package managers required. Simply serve the files via any HTTP/HTTPS server.
 
 ### Testing Locally
 ```bash
@@ -999,16 +870,15 @@ npx serve .
 ```
 
 ### Modifying Project Configuration
-1. Edit `INITIAL_OVERVIEW` object in `index.html` and `quick-interview.html`
-2. Update project details in `settings.html` form defaults
-3. Modify report template headers in `report.html`
+1. Update Supabase credentials in HTML files
+2. Modify Tailwind config for theme colors
+3. Update webhook URLs for n8n integration
 
 ### Adding New Report Sections
 1. Add section HTML to `quick-interview.html`
-2. Add corresponding data field to report object structure
-3. Update `renderSection()` function for display
-4. Update `buildProcessPayload()` to include new field for AI processing
-5. Add export rendering in `report.html`
+2. Add corresponding Supabase table/column if needed
+3. Update `buildProcessPayload()` to include new field for AI processing
+4. Add rendering in `report.html` and `finalreview.html`
 
 ---
 
@@ -1016,36 +886,42 @@ npx serve .
 
 | File | Lines | Size (approx) |
 |------|-------|---------------|
-| index.html | 931 | 45 KB |
-| quick-interview.html | 3,175 | 155 KB |
-| report.html | 1,881 | 85 KB |
-| archives.html | 491 | 22 KB |
-| editor.html | 741 | 34 KB |
+| index.html | 981 | 48 KB |
+| quick-interview.html | 3,961 | 195 KB |
+| report.html | 3,254 | 155 KB |
+| finalreview.html | 2,323 | 110 KB |
+| archives.html | 546 | 26 KB |
+| editor.html | 1,109 | 52 KB |
 | permissions.html | 1,596 | 80 KB |
 | permission-debug.html | 1,074 | 53 KB |
-| project-config.html | 1,581 | 76 KB |
-| settings.html | 478 | 23 KB |
+| project-config.html | 2,106 | 100 KB |
+| settings.html | 538 | 26 KB |
 | landing.html | 1,560 | 80 KB |
-| sw.js | 208 | 7 KB |
-| manifest.json | 65 | 2 KB |
+| sw.js | 209 | 7 KB |
+| manifest.json | 114 | 3 KB |
 | icons/ | - | ~3 KB |
 | assets/ | - | ~328 KB |
-| **Total** | **~13,781** | **~1 MB** |
+| **Total** | **~19,371** | **~1.3 MB** |
 
 ---
 
 ## Security Considerations
 
 ### Data Privacy
-- All report data stored locally in browser
-- Data only sent to configured n8n webhook endpoints for AI refinement and report submission
-- Photos stored as base64 in localStorage (never uploaded unless explicitly shared)
+- All report data stored in Supabase with row-level security
+- Photos stored as base64 in Supabase
 - GPS coordinates embedded in photos for audit purposes
+- User authentication via Supabase Auth
+
+### Supabase Security
+- Row-level security (RLS) policies protect data
+- Anonymous key used for public operations
+- Service role key (if used) should never be exposed client-side
 
 ### Webhook Security
 - Webhook URLs should be configured with appropriate authentication in the n8n workflow
 - Data transmitted includes report text content for AI refinement
-- Consider using HTTPS endpoints and API key authentication in production
+- All webhook endpoints use HTTPS
 
 ### HTTPS Requirement
 - Camera, microphone, and geolocation APIs require secure context (HTTPS)
@@ -1053,38 +929,21 @@ npx serve .
 
 ---
 
-## Common Modifications
-
-### Change Project Details
-Edit in `index.html` lines 275-300 and `quick-interview.html` lines 597-604.
-
-### Add New Contractor
-Contractors can be added in two ways:
-1. **During project setup** - Use project-config.html to configure the contractor roster
-2. **During daily report** - Use the "Add Contractor" button in quick-interview.html to add contractors on-the-fly (saved to project config for future reports)
-
-### Customize Report Styling
-Edit the print styles in `report.html` (lines 10-20) and the report template structure.
-
-### Adjust Photo Compression
-Modify `compressImage()` function parameters in `quick-interview.html` (line 634):
-```javascript
-// Current: maxWidth = 1200, quality = 0.7
-await compressImage(rawDataUrl, 1200, 0.7);
-```
-
-### Add New Weather Codes
-Extend the `weatherCodes` object in `index.html` (lines 418-433) with additional Open-Meteo weather code mappings.
-
----
-
 ## Recent Changes
+
+### Supabase Migration (January 2026)
+- **Complete migration from localStorage to Supabase**
+  - All pages now use Supabase for data storage
+  - Multi-device sync enabled
+  - Real-time data updates
+  - Persistent cloud storage
+  - Tables: `user_profiles`, `projects`, `reports`, `report_raw_capture`, `report_contractor_work`, `report_personnel`, `report_equipment_usage`, `report_photos`, `report_ai_response`, `report_user_edits`, `report_final`
 
 ### Add Contractor Modal in Quick Interview (January 2026)
 - **New feature in quick-interview.html** - Add contractors during report creation
   - "Add Contractor" button at bottom of Contractor Work section
   - Modal with fields: Contractor Name (required), Abbreviation (required, auto-uppercase, max 10 chars), Type dropdown (prime/subcontractor), Trades (optional)
-  - New contractor saved to active project in `fvp_projects` localStorage
+  - New contractor saved to active project in Supabase
   - Contractor immediately appears in Contractor Work section, Personnel/Operations, and Equipment dropdowns
   - Generates unique contractor ID: `contractor_{timestamp}_{random}`
   - Initializes empty activity and operations data in current report
@@ -1093,7 +952,7 @@ Extend the `weatherCodes` object in `index.html` (lines 418-433) with additional
 - **New feature in quick-interview.html** - Add equipment during report creation
   - Equipment section with totals display (Active/Idle counts), equipment list, and "Add Equipment" button
   - Modal with fields: Contractor dropdown, Equipment Type (required), Model (optional), Quantity
-  - **Dual persistence**: Equipment saved to BOTH project config (`fvp_projects`) AND current report
+  - **Dual persistence**: Equipment saved to BOTH project config AND current report
   - **Duplicate detection**: Checks if same type/model/contractor combination exists before adding to project
   - New equipment appears in future reports and is visible to other inspectors
   - Equipment immediately added to current report's equipment tracking
@@ -1109,14 +968,6 @@ Extend the `weatherCodes` object in `index.html` (lines 418-433) with additional
   - Empty value detection: empty string, `--`, or `N/A`
   - Highlighting updates when user navigates back from report.html with new data
   - Banner hidden during print
-  - Fields checked: Project Name, NOAB Project No., CNO Solicitation No., Location, Engineer, Contractor, Notice to Proceed, Contract Duration, Expected Completion, Contract Day #, Weather Days, Report Date, Start Time, End Time, Completed By
-
-### Code Cleanup (January 2026)
-- **Removed unused commented-out code from quick-interview.html**
-  - Removed placeholder comments for deprecated sections (Personnel/Operations, Equipment, QA/QC Inspections, Communications, Visitors/Deliveries)
-  - Removed commented-out Additional Notes section HTML
-  - These sections were previously moved to the editable report page
-  - Cleanup reduces file size and improves code maintainability
 
 ### Dual Capture Modes (January 2026)
 - **New feature in quick-interview.html** - Choose between two capture workflows:
@@ -1134,177 +985,25 @@ Extend the `weatherCodes` object in `index.html` (lines 418-433) with additional
   - Real-time height adjustment for better mobile experience
   - Scrollable when content exceeds max height
 
-### Photo Display Improvements (January 2026)
-- **Full-size photo cards** with improved display
-  - Photos now display at full size within cards
-  - Proper orientation handling for portrait/landscape photos
-  - Editable captions for each photo
-  - Better visual hierarchy in photo sections
-
-### Streamlined AI Processing Flow (January 2026)
-- **Integrated AI processing** directly into quick-interview workflow
-  - AI refinement now triggered automatically when clicking "Finish"
-  - Removed separate AI review step for faster workflow
-  - Processing happens before navigation to report.html
-  - Better error handling for offline scenarios
-
-### Report Archives Page (January 2026)
-- **New page: archives.html** - View and manage historical reports
-  - Date-sorted list of all saved reports
-  - Swipe-to-delete functionality with touch gesture support
-  - Delete confirmation modal to prevent accidental deletion
-  - View any past report directly from the archive
-  - "Report Archives" button added to home dashboard
-  - Empty state message when no reports exist
-  - Toast notifications for delete actions
-  - Home button navigation back to dashboard
-
-### Document Import System (January 2026)
-- **New feature in project-config.html** - Automated project data extraction from existing reports
-  - Drag-and-drop file upload for PDF and DOCX documents
-  - Multi-file support for comprehensive extraction
-  - Automatic form field population from extracted data
-  - Missing field indicators (red styling) for incomplete extractions
-  - Collapsible extraction notes section for uncertain values
-  - Auto-population of contractor roster from document data
-  - Equipment inventory extraction with contractor matching
-  - Success/error banner feedback with detailed messages
-  - Loading spinner animation during webhook processing
-  - Webhook integration: `fieldvoice-project-extractor` endpoint
-
-### Project Configuration System (January 2026)
-- **New page: project-config.html** - Comprehensive project management interface
-  - Create and manage multiple construction projects
-  - Configure project details (name, number, location, engineer, contractor)
-  - Set contract information (NTP date, duration, expected completion)
-  - Build contractor roster with prime and subcontractor designations
-  - Manage equipment inventory per contractor
-  - Set active project for daily reports
-
-### Dashboard Project Integration
-- Added "Manage Projects" button in header navigation
-- New Active Project card displays current project name and number
-- Project picker modal appears when beginning a daily report
-- Warning modal when no active project is selected
-- Seamless navigation between dashboard and project configuration
-
-### Inspector Profile (Settings Refactored)
-- **settings.html renamed to Inspector Profile**
-- Personal information section: Name, Title, Company/Firm, Email, Phone
-- Live signature preview shows formatted "Completed By" line
-- Project configuration moved to dedicated project-config.html
-- Storage key changed from `fvp_settings` to `fvp_user_settings`
-- Added prominent "Manage Projects" link
-
-### Contractor-Based Work Entry
-- Replaced simple work summary with contractor-organized system
-- Each contractor from active project displayed as expandable card
-- "No work performed on [date]" checkbox for inactive contractors
-- Per-contractor fields: work narrative, equipment used, crew
-- Prime contractors sorted first, visual distinction from subcontractors
-
-### DOT-Compliant Personnel/Operations Section
-- New Personnel section tracks headcounts with DOT columns:
-  - Superintendent(s), Foreman, Operator(s), Laborer(s), Surveyor(s), Other(s)
-- Compact grid layout with number inputs per contractor
-- Auto-calculated totals row
-- Trade abbreviation logic (Pile Driving→PLE, Concrete→CONC)
-- Visual indicators: green border for prime, blue for subcontractors
-
-### Equipment Status Tracking
-- New Equipment section loads inventory from active project
-- Per-equipment status dropdown: IDLE or 1-10 hours utilized
-- "Mark All IDLE" quick action for low-activity days
-- Summary shows active vs. idle equipment counts
-- Data stored with equipmentId, contractorId, and hoursUtilized
-
-### Visitors Section Split into DOT-Compliant Sections
-- **Communications with Contractor**: Dedicated section for contractor discussions
-- **Visitors; Deliveries; Additional Contract and/or Change Order Activities; Other Remarks**: Matches official DOT form title
-- Both sections use text areas with dictation support and N/A toggle
-- Migrated from array format to string format for DOT compatibility
-
-### Progress Tracking Expanded
-- Quick interview now tracks 12 sections (up from 7)
-- Progress bar accurately reflects completion across all new sections
-- Status icons update in real-time for each section
-
-### AI Review Renamed to AI Kit
-- The review page has been rebranded from "AI Review" to "AI Kit"
-- Updated page title and header to reflect the new branding
-- Added training data export functionality for prompt refinement
-
-### Report Page Streamlining
-- Removed Edit and Print buttons from report.html for a cleaner interface
-- Report page now focuses on Submit functionality with streamlined navigation
-- Navigation includes Home button, Back to AI Kit link, and Submit button
-
-### Navigation Improvements
-- Added Home buttons to key pages for easier navigation
-- Improved workflow tracking throughout the application
-- Better integration between AI Kit and Report pages
-
-### Dashboard Simplification
-- Simplified the home dashboard to a single-action interface
-- Setup functionality moved to the Settings page for cleaner UX
-
-### Voice Input Streamlining
-- Removed dedicated microphone buttons throughout the app
-- Voice input now relies exclusively on native keyboard dictation (iOS Siri, Android Google Voice)
-- This approach provides better reliability and consistency across devices
-
-### iOS Support Improvements
-- Added safe-area CSS insets for proper display on devices with notch/Dynamic Island
-- Fixed PWA standalone mode navigation issues on iOS
-
-### Favicon & Branding
-- Added proper favicon assets in the `/assets/` directory
-- Includes favicon.ico, PNG favicons (16x16, 32x32), and apple-touch-icon
-- All HTML pages now reference the new favicon assets
-
-### Report Workflow Improvements
-- Improved report status tracking to accurately reflect workflow state
-- Fixed post-submission flow to allow starting fresh reports after submission
-
-### PWA Enhancements
-- Fixed PWA paths for GitHub Pages subdirectory hosting
-- Updated webhook URLs to production endpoints
-
-### Refresh App Button (January 2026)
-- **New feature in settings.html** - Added "Refresh App" button in Troubleshooting section
-  - Clears PWA service worker cache to get latest app version
-  - Preserves all user data (reports, settings, projects) in localStorage
-  - Unregisters service workers and clears browser caches
-  - Automatically reloads page after cache clear
-  - Useful for troubleshooting or forcing app updates
-
-### Mobile-Friendly Layouts (January 2026)
-- **Refactored Personnel and Equipment sections** for improved mobile experience
-  - Personnel section uses compact grid layout optimized for small screens
-  - Equipment section cards with touch-friendly dropdowns
-  - Better responsive behavior on narrow viewports
-  - Improved readability with adjusted font sizes and spacing
-
 ---
 
 ## Summary
 
 FieldVoice Pro is a sophisticated, production-ready field documentation system that:
+
+- **Cloud-powered with Supabase** - Multi-device sync, real-time updates, persistent storage
 - **Multi-project management** - Configure and switch between multiple construction projects with contractor rosters and equipment inventories
 - **Document import** - Automatically extract project data from existing PDF/DOCX reports via AI-powered document processing
-- **Fully installable as a PWA** - Works offline when saved to home screen on mobile devices
+- **Fully installable as a PWA** - Works offline for basic operations when saved to home screen
 - **Dual capture modes** - Quick Notes (minimal freeform) or Guided Sections (12 structured DOT sections) to fit your workflow
 - **DOT-compliant reporting** - Contractor-based work entry, personnel tracking, and equipment status matching DOT form requirements
 - **Auto-expanding textareas** - Input fields grow with content for better mobile experience
-- **AI Kit integration** - Side-by-side text refinement with training data export for prompt improvement
-- Operates primarily client-side with optional n8n webhook integration for AI features
+- **AI processing integration** - n8n webhooks for text refinement
 - Supports voice-first data entry via native keyboard dictation with AI enhancement
 - Generates professional, DOT-compliant PDF reports with 12 comprehensive sections
-- **Complete offline support** for report creation, editing, and viewing (weather sync and AI features require internet)
-- Uses n8n webhooks for AI text refinement, report submission, and document extraction
-- Manages browser storage efficiently with automatic compression
-- **Service worker caching** ensures fast load times and airplane mode compatibility
+- Uses n8n webhooks for AI text refinement and document extraction
+- **Service worker caching** ensures fast load times
 - **Safe-area support** for modern iOS devices with notch/Dynamic Island
 - **Streamlined navigation** with project picker, Home buttons, and improved workflow tracking
 
-The codebase is mature (~13,781 lines including PWA infrastructure), well-structured, and includes comprehensive error handling for real-world field conditions including graceful offline degradation.
+The codebase is mature (~19,371 lines including PWA infrastructure), well-structured, and includes comprehensive error handling for real-world field conditions including graceful offline degradation.
