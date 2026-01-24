@@ -189,7 +189,55 @@ Expandable section cards for structured input:
 - `addSafetyNote()` - Adds note to array
 - `removeSafetyNote(index)` - Removes note at index
 
-#### 5. Progress Photos
+#### 5. Contractor Work
+
+**Section Card:** `data-section="contractor-work"`
+
+| Field ID/Class | Input Type | Data Captured |
+|----------------|------------|---------------|
+| `contractor-work-list` | Container | Rendered contractor work cards |
+| Add Contractor button | button | `showAddContractorModal()` handler |
+
+**Per-Contractor Card Fields:**
+| Field ID Pattern | Input Type | Data Captured |
+|------------------|------------|---------------|
+| `noWork-{contractorId}` | checkbox | "No work performed" flag |
+| `narrative-{contractorId}` | textarea | Work narrative description |
+
+**Data Path:** `report.activities[]` (per-contractor activity objects)
+
+**Functions:**
+- `renderContractorWorkCards()` - Renders contractor cards from active project
+- `showAddContractorModal()` - Opens add contractor modal
+- `saveNewContractor()` - Saves new contractor to project and report
+
+#### 6. Equipment
+
+**Section Card:** `data-section="equipment"`
+
+| Field ID/Class | Input Type | Data Captured |
+|----------------|------------|---------------|
+| `equipment-totals` | Display | Active/Idle equipment counts |
+| `equipment-warnings` | Display | Warning messages |
+| `equipment-list` | Container | Rendered equipment cards |
+| Add Equipment button | button | `showAddEquipmentModal()` handler |
+| Mark All IDLE button | button | `markAllEquipmentIdle()` handler |
+
+**Per-Equipment Card Fields:**
+| Field ID Pattern | Input Type | Data Captured |
+|------------------|------------|---------------|
+| `equip-status-{equipmentId}` | select | Hours utilized (IDLE or 1-10 hours) |
+| `equip-qty-{equipmentId}` | number | Equipment quantity |
+
+**Data Path:** `report.equipment[]` (per-equipment status objects)
+
+**Functions:**
+- `renderEquipmentCards()` - Renders equipment cards from active project
+- `showAddEquipmentModal()` - Opens add equipment modal
+- `saveNewEquipment()` - Saves new equipment to project config AND report
+- `markAllEquipmentIdle()` - Sets all equipment to IDLE status
+
+#### 7. Progress Photos
 
 **Section Card:** `data-section="photos"`
 
@@ -227,6 +275,75 @@ Expandable section cards for structured input:
 5. Compresses image (max 1200px width, 70% quality)
 6. If storage low, re-compresses (max 800px width, 50% quality)
 7. Captures timestamp at upload time
+
+---
+
+---
+
+## Modal Dialogs
+
+### Add Contractor Modal
+
+**Container ID:** `addContractorModal`
+
+Allows users to add new contractors during the interview process. New contractors are saved to the active project in localStorage.
+
+| Field ID | Input Type | Required | Validation |
+|----------|------------|----------|------------|
+| `newContractorName` | text | Yes | Non-empty |
+| `newContractorAbbr` | text | Yes | Max 10 chars, auto-uppercase |
+| `newContractorType` | select | Yes | "prime" or "subcontractor" |
+| `newContractorTrades` | text | No | Semicolon-separated trades |
+
+**Functions:**
+- `showAddContractorModal()` - Shows modal, populates contractor dropdown
+- `hideAddContractorModal()` - Hides modal, clears form
+- `saveNewContractor()` - Validates, saves to project, updates UI
+
+**Save Behavior:**
+1. Generates unique ID: `contractor_{timestamp}_{random}`
+2. Adds contractor to `activeProject.contractors[]`
+3. Updates `fvp_projects` in localStorage
+4. Initializes empty activity object in `report.activities[]`
+5. Initializes empty operations object in `report.operations[]`
+6. Re-renders Contractor Work, Personnel, and Equipment sections
+7. Shows success toast notification
+
+### Add Equipment Modal
+
+**Container ID:** `addEquipmentModal`
+
+Allows users to add new equipment during the interview process. Equipment is saved to BOTH the project config (for future reports) AND the current report.
+
+| Field ID | Input Type | Required | Validation |
+|----------|------------|----------|------------|
+| `newEquipContractor` | select | Yes | Valid contractor ID |
+| `newEquipType` | text | Yes | Non-empty |
+| `newEquipModel` | text | No | Optional model number |
+| `newEquipQty` | number | Yes | Min 1 |
+
+**Functions:**
+- `showAddEquipmentModal()` - Shows modal, populates contractor dropdown
+- `hideAddEquipmentModal()` - Hides modal, clears form
+- `saveNewEquipment()` - Validates, saves to project and report, updates UI
+
+**Save Behavior:**
+1. Generates unique ID: `equip_{timestamp}_{random}`
+2. **Duplicate Detection:** Checks if same type/model/contractor exists in project
+3. If not duplicate, adds to `activeProject.equipment[]`
+4. Updates `fvp_projects` in localStorage
+5. Adds equipment entry to `report.equipment[]` with quantity and null hours
+6. Re-renders Equipment section
+7. Shows success toast (includes "already in project config" note if duplicate)
+
+**Duplicate Detection Logic:**
+```javascript
+const isDuplicate = existingEquipment.some(e =>
+    e.contractorId === contractorId &&
+    e.type.toLowerCase() === type.toLowerCase() &&
+    (e.model || '').toLowerCase() === model.toLowerCase()
+);
+```
 
 ---
 
