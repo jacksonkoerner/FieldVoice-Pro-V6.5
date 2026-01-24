@@ -4,6 +4,11 @@
 
 `report.html` is the Daily Report viewer and editor in FieldVoice Pro. It displays and allows editing of construction daily reports that combine field-captured data with AI-generated content from the n8n webhook.
 
+### Storage Backend
+
+- **Supabase Tables**: `reports`, `report_ai_response`, `report_user_edits`, `report_contractor_work`, `report_personnel`, `report_equipment_usage`, `report_photos`
+- **Local Storage**: Device-specific preferences only
+
 ### Data Flow
 
 ```
@@ -19,7 +24,7 @@ n8n webhook (POST to fieldvoice-refine)
     AI Processing
          │
          ▼
-   aiGenerated payload
+   aiGenerated payload saved to Supabase
          │
          ▼
 report.html (display + edit)
@@ -56,7 +61,7 @@ The `getValue()` function implements a priority system for resolving field value
 
 ### User Edit Tracking
 
-When a user modifies a field, the value is stored in `report.userEdits[path]` and the field receives the `user-edited` CSS class (yellow background). User edits persist across page loads and always override AI-generated values.
+When a user modifies a field, the value is stored in Supabase `report_user_edits` table and the field receives the `user-edited` CSS class (yellow background). User edits persist across page loads and always override AI-generated values.
 
 ---
 
@@ -162,7 +167,7 @@ Dynamic cards rendered for each contractor in `projectContractors`. Each card co
 
 ### Photos Section
 
-Dynamic photo cards rendered from `report.photos[]`. Each card contains:
+Dynamic photo cards rendered from report photos (Supabase `report_photos` table). Each card contains:
 
 | Element | Data Attribute | Description |
 |---------|----------------|-------------|
@@ -194,9 +199,9 @@ A collapsible debug panel for troubleshooting AI field mapping issues. Located a
 
 | Section ID | Header | Content |
 |------------|--------|---------|
-| `debugSectionAI` | AI Response Data | Raw JSON of `report.aiGenerated` |
-| `debugSectionFieldNotes` | Field Notes (Raw Capture) | JSON of `report.fieldNotes` and `report.guidedNotes` |
-| `debugSectionUserEdits` | User Edits | JSON of `report.userEdits` |
+| `debugSectionAI` | AI Response Data | Raw JSON of AI-generated content |
+| `debugSectionFieldNotes` | Field Notes (Raw Capture) | JSON of field notes and guided notes |
+| `debugSectionUserEdits` | User Edits | JSON of user edits |
 | `debugSectionCurrentState` | Current Report State | JSON of current activities, operations, equipment |
 | `debugSectionIssues` | Field Mapping Issues | List of detected issues with issue count badge |
 
@@ -359,7 +364,7 @@ The n8n webhook should return a JSON response with this structure:
 
 **Render Function:** `renderWorkSummary()`
 
-**Data Source:** `projectContractors` array (from active project config)
+**Data Source:** `projectContractors` array (from active project config in Supabase)
 
 **Behavior:**
 1. Iterates through `projectContractors` sorted by type (prime first)
@@ -389,7 +394,7 @@ The n8n webhook should return a JSON response with this structure:
 
 **Render Function:** `renderEquipmentTable()`
 
-**Data Source:** `getEquipmentData()` (merges report.equipment and aiGenerated.equipment)
+**Data Source:** `getEquipmentData()` (merges report equipment and aiGenerated equipment)
 
 **Behavior:**
 1. Renders existing equipment data or one empty row
@@ -401,7 +406,7 @@ The n8n webhook should return a JSON response with this structure:
 
 **Render Function:** `renderPhotos()`
 
-**Data Source:** `report.photos[]` array
+**Data Source:** Supabase `report_photos` table
 
 **Behavior:**
 1. Single-column layout for DOT compliance
@@ -415,9 +420,9 @@ The n8n webhook should return a JSON response with this structure:
 **Render Function:** `initializeDebugPanel()`
 
 **Data Sources:**
-- `report.aiGenerated` - AI response data
-- `report.fieldNotes` / `report.guidedNotes` - Raw field capture
-- `report.userEdits` - User modifications
+- AI response from Supabase `report_ai_response`
+- Raw field capture from Supabase `report_raw_capture`
+- User edits from Supabase `report_user_edits`
 - `projectContractors` - For contractor ID validation
 
 **Behavior:**
@@ -431,90 +436,77 @@ The n8n webhook should return a JSON response with this structure:
 
 ---
 
-## Webhook Request Payload
+## Supabase Storage
 
-The payload sent to the n8n webhook from `quick-interview.html`:
+### Report User Edits Table
 
-```json
-{
-  "reportId": "fieldvoice_report_projectId_2024-01-15",
-  "captureMode": "guided",
+User edits are saved to Supabase for persistence across devices:
 
-  "projectContext": {
-    "projectId": "uuid",
-    "projectName": "Highway 61 Reconstruction",
-    "noabProjectNo": "1291",
-    "location": "New Orleans, LA",
-    "engineer": "Engineering Firm Inc",
-    "primeContractor": "ABC Construction",
-    "contractors": [
-      {
-        "id": "uuid",
-        "name": "ABC Construction",
-        "type": "prime",
-        "trades": "General"
-      }
-    ],
-    "equipment": [
-      {
-        "id": "uuid",
-        "type": "Excavator",
-        "model": "CAT 320"
-      }
-    ]
-  },
+```sql
+CREATE TABLE report_user_edits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  report_id UUID REFERENCES reports(id),
+  field_path TEXT NOT NULL,
+  original_value TEXT,
+  edited_value TEXT,
+  edited_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
-  "fieldNotes": {
-    "workSummary": "Raw transcribed work summary...",
-    "issues": "Raw issues notes...",
-    "safety": "Raw safety notes..."
-  },
+### Saving User Edits
 
-  "weather": {
-    "highTemp": "85",
-    "lowTemp": "72",
-    "precipitation": "0.00",
-    "generalCondition": "Sunny",
-    "jobSiteCondition": "Dry"
-  },
+```javascript
+async function saveUserEdit(reportId, fieldPath, originalValue, editedValue) {
+    const { error } = await supabase
+        .from('report_user_edits')
+        .upsert({
+            report_id: reportId,
+            field_path: fieldPath,
+            original_value: originalValue,
+            edited_value: editedValue,
+            edited_at: new Date().toISOString()
+        }, {
+            onConflict: 'report_id,field_path'
+        });
 
-  "photos": [
-    {
-      "id": "photo-uuid",
-      "caption": "Existing caption",
-      "timestamp": 1705329600000,
-      "date": "1/15/2024",
-      "time": "10:30 AM",
-      "gps": { "lat": 29.9511, "lng": -90.0715 }
+    if (error) {
+        console.error('Error saving user edit:', error);
     }
-  ],
-
-  "reportDate": "1/15/2024",
-  "inspectorName": "John Smith"
 }
 ```
 
 ---
 
-## Storage Keys
-
-| Key Pattern | Description |
-|-------------|-------------|
-| `fieldvoice_report_[projectId]_[date]` | Project-specific daily report |
-| `fieldvoice_report_[date]` | Legacy date-only key |
-| `fieldvoice_report` | Most recent report (backward compatibility) |
-| `[key]_submitted_[timestamp]` | Archived submitted reports |
-
----
-
 ## Status Tracking
 
-The `report.meta.status` field indicates processing state:
+The `reports.status` field indicates processing state:
 
 | Status | Description |
 |--------|-------------|
+| `draft` | Fresh report, not yet processed |
 | `pending_refine` | Waiting for AI processing (offline or failed) |
 | `refined` | AI processing complete |
-| (undefined) | Fresh report, not yet processed |
+| `submitted` | Report submitted |
+| `finalized` | Report finalized and archived |
 
 When status is `pending_refine`, a yellow banner appears with "Retry Now" button to re-attempt webhook call.
+
+---
+
+## Error Handling
+
+### Network Errors
+- Toast notification for connection failures
+- Data cached locally as fallback
+- Retry option when connection restored
+
+### Supabase Errors
+- Logged to console
+- User-friendly toast message
+- Graceful degradation when possible
+
+### AI Response Errors
+- Debug panel shows field mapping issues
+- Yellow banner alerts user to problems
+- Export options for debugging

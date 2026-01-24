@@ -5,6 +5,7 @@
 **File:** `project-config.html`
 **Purpose:** Project configuration and document import for FieldVoice Pro. This page allows users to create, edit, and manage construction projects with associated contractors and equipment. It also supports automatic data extraction from existing RPR Daily Reports via webhook integration.
 
+**Storage Backend:** Supabase (`projects` table)
 **Webhook:** `fieldvoice-project-extractor`
 **Webhook URL:** `https://advidere.app.n8n.cloud/webhook/fieldvoice-project-extractor`
 
@@ -66,7 +67,7 @@
 6. **Webhook Request:** Files are sent to n8n webhook as FormData
 7. **Response Processing:** Webhook response populates form fields automatically
 8. **User Review:** User reviews extracted data and fills in any missing fields
-9. **Save:** User saves the project to localStorage
+9. **Save:** User saves the project to Supabase
 
 ---
 
@@ -244,35 +245,54 @@ When a field value is `null`, `undefined`, or empty string:
 
 ---
 
-## localStorage Structure
+## Supabase Storage
 
-### Storage Keys
+### Projects Table Schema
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `fvp_projects` | string (JSON array) | Array of all saved project objects |
-| `fvp_active_project` | string | ID of the currently active project |
+Projects are stored in the Supabase `projects` table with the following structure:
 
-### Project Object Schema
+```sql
+CREATE TABLE projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_name TEXT NOT NULL,
+  noab_project_no TEXT,
+  cno_solicitation_no TEXT DEFAULT 'N/A',
+  location TEXT,
+  engineer TEXT,
+  prime_contractor TEXT,
+  notice_to_proceed DATE,
+  contract_duration INTEGER,
+  weather_days INTEGER DEFAULT 0,
+  expected_completion DATE,
+  default_start_time TIME DEFAULT '06:00',
+  default_end_time TIME DEFAULT '16:00',
+  logo TEXT,
+  contractors JSONB DEFAULT '[]',
+  equipment JSONB DEFAULT '[]',
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Project Object Schema (JSONB)
 
 ```json
 {
-  "id": "proj_1706123456789",
-  "name": "I-10 Bridge Reconstruction",
+  "id": "uuid-from-supabase",
+  "project_name": "I-10 Bridge Reconstruction",
   "logo": "data:image/png;base64,iVBORw0KGgoAAAANS...",
-  "noabProjectNo": "1291",
-  "cnoSolicitationNo": "N/A",
+  "noab_project_no": "1291",
+  "cno_solicitation_no": "N/A",
   "location": "Jefferson Highway at Mississippi River",
   "engineer": "AECOM",
-  "primeContractor": "Boh Bros Construction",
-  "noticeToProceed": "2024-01-15",
-  "reportDate": "2024-02-03",
-  "contractDuration": 467,
-  "expectedCompletion": "2025-04-27",
-  "defaultStartTime": "06:00",
-  "defaultEndTime": "16:00",
-  "weatherDays": 5,
-  "contractDayNo": 19,
+  "prime_contractor": "Boh Bros Construction",
+  "notice_to_proceed": "2024-01-15",
+  "contract_duration": 467,
+  "expected_completion": "2025-04-27",
+  "default_start_time": "06:00",
+  "default_end_time": "16:00",
+  "weather_days": 5,
   "contractors": [
     {
       "id": "contractor_1706123456790",
@@ -302,34 +322,14 @@ When a field value is `null`, `undefined`, or empty string:
       "type": "Excavator",
       "model": "CAT 320"
     }
-  ]
+  ],
+  "status": "active",
+  "created_at": "2024-01-15T08:00:00.000Z",
+  "updated_at": "2024-01-15T08:00:00.000Z"
 }
 ```
 
-### Project Object Field Definitions
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `id` | string | Auto-generated | Format: `proj_{timestamp}` |
-| `name` | string | `""` | Project name (required for save) |
-| `logo` | string\|null | `null` | Base64-encoded image data |
-| `noabProjectNo` | string | `""` | NOAB project number |
-| `cnoSolicitationNo` | string | `"N/A"` | CNO solicitation number |
-| `location` | string | `""` | Project location |
-| `engineer` | string | `""` | Engineering firm |
-| `primeContractor` | string | `""` | Prime contractor name |
-| `noticeToProceed` | string | `""` | Date (YYYY-MM-DD) |
-| `reportDate` | string | `""` | Sample report date (YYYY-MM-DD) |
-| `contractDuration` | number\|string | `""` | Duration in days |
-| `expectedCompletion` | string | `""` | Date (YYYY-MM-DD) |
-| `defaultStartTime` | string | `"06:00"` | Default work start time |
-| `defaultEndTime` | string | `"16:00"` | Default work end time |
-| `weatherDays` | number | `0` | Accumulated weather days |
-| `contractDayNo` | number\|string | `""` | Current contract day |
-| `contractors` | array | `[]` | Array of contractor objects |
-| `equipment` | array | `[]` | Array of equipment objects |
-
-### Contractor Object (in localStorage)
+### Contractor Object (in contractors JSONB array)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -339,7 +339,7 @@ When a field value is `null`, `undefined`, or empty string:
 | `type` | string | "prime" or "subcontractor" |
 | `trades` | string | Semicolon-separated trades |
 
-### Equipment Object (in localStorage)
+### Equipment Object (in equipment JSONB array)
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -348,12 +348,74 @@ When a field value is `null`, `undefined`, or empty string:
 | `type` | string | Equipment type |
 | `model` | string | Model number/name |
 
+### Local Storage (Device-Specific)
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `fvp_active_project` | string | ID of the currently active project on this device |
+
+---
+
+## Supabase Operations
+
+### Load Projects
+
+```javascript
+async function loadProjects() {
+    const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('status', 'active')
+        .order('updated_at', { ascending: false });
+
+    if (error) {
+        console.error('Error loading projects:', error);
+        return [];
+    }
+    return data;
+}
+```
+
+### Save Project
+
+```javascript
+async function saveProject(project) {
+    const { data, error } = await supabase
+        .from('projects')
+        .upsert(project)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Error saving project:', error);
+        throw error;
+    }
+    return data;
+}
+```
+
+### Delete Project
+
+```javascript
+async function deleteProject(projectId) {
+    const { error } = await supabase
+        .from('projects')
+        .update({ status: 'archived' })
+        .eq('id', projectId);
+
+    if (error) {
+        console.error('Error deleting project:', error);
+        throw error;
+    }
+}
+```
+
 ---
 
 ## UI Components
 
 ### Saved Projects List
-- Displays all projects from localStorage
+- Displays all projects from Supabase
 - Shows active project indicator (green border)
 - Edit and delete buttons for each project
 
@@ -382,3 +444,22 @@ When a field value is `null`, `undefined`, or empty string:
 ### Delete Confirmation Modal
 - Generic modal for all delete operations
 - Customizable message per operation
+
+---
+
+## Error Handling
+
+### Network Errors
+- Toast notification for connection failures
+- Retry button for failed operations
+- Offline banner when disconnected
+
+### Validation Errors
+- Red border on invalid fields
+- Error message below field
+- Form submission blocked until resolved
+
+### Supabase Errors
+- Logged to console
+- User-friendly toast message
+- Graceful degradation when possible
