@@ -1059,7 +1059,9 @@ npx serve .
 Edit in `index.html` lines 275-300 and `quick-interview.html` lines 597-604.
 
 ### Add New Contractor
-Modify the `contractors` array in the report object, or use the Full Report flow which includes a contractor management interface.
+Contractors can be added in two ways:
+1. **During project setup** - Use project-config.html to configure the contractor roster
+2. **During daily report** - Use the "Add Contractor" button in quick-interview.html to add contractors on-the-fly (saved to project config for future reports)
 
 ### Customize Report Styling
 Edit the print styles in `report.html` (lines 10-20) and the report template structure.
@@ -1077,6 +1079,26 @@ Extend the `weatherCodes` object in `index.html` (lines 418-433) with additional
 ---
 
 ## Recent Changes
+
+### Add Contractor Modal in Quick Interview (January 2026)
+- **New feature in quick-interview.html** - Add contractors during report creation
+  - "Add Contractor" button at bottom of Contractor Work section
+  - Modal with fields: Contractor Name (required), Abbreviation (required, auto-uppercase, max 10 chars), Type dropdown (prime/subcontractor), Trades (optional)
+  - New contractor saved to active project in `fvp_projects` localStorage
+  - Contractor immediately appears in Contractor Work section, Personnel/Operations, and Equipment dropdowns
+  - Generates unique contractor ID: `contractor_{timestamp}_{random}`
+  - Initializes empty activity and operations data in current report
+
+### Add Equipment During Interview (January 2026)
+- **New feature in quick-interview.html** - Add equipment during report creation
+  - Equipment section with totals display (Active/Idle counts), equipment list, and "Add Equipment" button
+  - Modal with fields: Contractor dropdown, Equipment Type (required), Model (optional), Quantity
+  - **Dual persistence**: Equipment saved to BOTH project config (`fvp_projects`) AND current report
+  - **Duplicate detection**: Checks if same type/model/contractor combination exists before adding to project
+  - New equipment appears in future reports and is visible to other inspectors
+  - Equipment immediately added to current report's equipment tracking
+  - Generates unique equipment ID: `equip_{timestamp}_{random}`
+  - "Mark All IDLE" quick action for low-activity days
 
 ### Empty Field Highlighting in Final Review (January 2026)
 - **New feature in finalreview.html** - Visual indicators for incomplete Project Overview fields
