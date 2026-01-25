@@ -20,6 +20,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./js/config.js"></script>
+    <script src="./js/supabase-utils.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -1018,56 +1019,6 @@
         let currentTab = 'form';
 
         const N8N_PROCESS_WEBHOOK = 'https://advidere.app.n8n.cloud/webhook/fieldvoice-refine-v6';
-
-        // ============ FIELD MAPPING UTILITIES ============
-        // Convert Supabase project row to JS format
-        function fromSupabaseProject(row) {
-            return {
-                id: row.id,
-                name: row.project_name || '',
-                noabProjectNo: row.noab_project_no || '',
-                cnoSolicitationNo: row.cno_solicitation_no || 'N/A',
-                location: row.location || '',
-                engineer: row.engineer || '',
-                primeContractor: row.prime_contractor || '',
-                noticeToProceed: row.notice_to_proceed || '',
-                contractDuration: row.contract_duration || '',
-                weatherDays: row.weather_days || 0,
-                expectedCompletion: row.expected_completion || '',
-                defaultStartTime: row.default_start_time || '06:00',
-                defaultEndTime: row.default_end_time || '16:00',
-                logo: row.logo || null,
-                status: row.status || 'active',
-                contractors: [],
-                equipment: []
-            };
-        }
-
-        function fromSupabaseContractor(row) {
-            return {
-                id: row.id,
-                name: row.name || '',
-                abbreviation: row.abbreviation || '',
-                type: row.type || 'subcontractor',
-                trades: Array.isArray(row.trades) ? row.trades.join('; ') : (row.trades || ''),
-                status: row.status || 'active',
-                addedDate: row.added_date || null,
-                removedDate: row.removed_date || null
-            };
-        }
-
-        function fromSupabaseEquipment(row) {
-            return {
-                id: row.id,
-                contractorId: row.contractor_id,
-                type: row.type || '',
-                model: row.model || '',
-                identifier: row.identifier || null,
-                status: row.status || 'active',
-                addedDate: row.added_date || null,
-                removedDate: row.removed_date || null
-            };
-        }
 
         // Generate UUID for new records
         function generateId() {
