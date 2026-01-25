@@ -939,7 +939,7 @@ When working on this codebase, follow these rules:
 | Module | Status | Files Still Using Inline |
 |--------|--------|--------------------------|
 | config.js | ✅ Complete | 0 files |
-| supabase-utils.js | Not started | 5 files |
+| supabase-utils.js | ✅ Complete | 0 files |
 | pwa-utils.js | Not started | 8 files |
 | ui-utils.js | Not started | 4 files |
 

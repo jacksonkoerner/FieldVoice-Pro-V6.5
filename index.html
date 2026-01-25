@@ -20,6 +20,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./js/config.js"></script>
+    <script src="./js/supabase-utils.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -224,27 +225,6 @@
         let projectsCache = [];
         let activeProjectCache = null;
         let todayReportCache = null;
-
-        // ============ FIELD MAPPING UTILITIES ============
-        function fromSupabaseProject(row) {
-            return {
-                id: row.id,
-                name: row.project_name || '',
-                noabProjectNo: row.noab_project_no || '',
-                cnoSolicitationNo: row.cno_solicitation_no || 'N/A',
-                location: row.location || '',
-                engineer: row.engineer || '',
-                primeContractor: row.prime_contractor || '',
-                noticeToProceed: row.notice_to_proceed || '',
-                contractDuration: row.contract_duration || '',
-                weatherDays: row.weather_days || 0,
-                expectedCompletion: row.expected_completion || '',
-                defaultStartTime: row.default_start_time || '06:00',
-                defaultEndTime: row.default_end_time || '16:00',
-                logo: row.logo || null,
-                status: row.status || 'active'
-            };
-        }
 
         // ============ PROJECT MANAGEMENT ============
         async function loadProjects() {
