@@ -1055,7 +1055,7 @@
                 setupAutoSave();
 
                 // Initialize auto-expand textareas
-                initAutoExpandTextareas();
+                initAllAutoExpandTextareas();
 
                 // Update header date
                 updateHeaderDate();
@@ -1878,7 +1878,7 @@
                         <p class="text-xs text-slate-400 mt-1">No project contractors defined. Add contractors in Project Settings.</p>
                     </div>
                 `;
-                initAutoExpandTextareas();
+                initAllAutoExpandTextareas();
                 return;
             }
 
@@ -1940,7 +1940,7 @@
                 `;
             }).join('');
 
-            initAutoExpandTextareas();
+            initAllAutoExpandTextareas();
             setupContractorListeners();
         }
 
@@ -2404,7 +2404,7 @@
                 }, 1000));
             });
 
-            initAutoExpandTextareas();
+            initAllAutoExpandTextareas();
         }
 
         /**
@@ -2725,25 +2725,7 @@
             }, 2000);
         }
 
-        // ============ AUTO-EXPAND TEXTAREAS ============
-        function initAutoExpandTextareas() {
-            document.querySelectorAll('.auto-expand').forEach(textarea => {
-                if (textarea.dataset.autoExpandInit) return;
-                textarea.dataset.autoExpandInit = 'true';
-
-                const resize = () => {
-                    textarea.style.height = 'auto';
-                    const newHeight = Math.max(72, Math.min(textarea.scrollHeight, 400));
-                    textarea.style.height = newHeight + 'px';
-                    textarea.classList.toggle('scrollable', textarea.scrollHeight > 400);
-                };
-
-                textarea.addEventListener('input', resize);
-                textarea.addEventListener('focus', resize);
-                textarea.addEventListener('blur', resize);
-                resize();
-            });
-        }
+        // initAllAutoExpandTextareas() replaced by initAllAutoExpandTextareas() from /js/ui-utils.js
 
         // ============ UI HELPERS ============
         function updateHeaderDate() {

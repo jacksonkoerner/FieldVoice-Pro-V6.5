@@ -111,3 +111,78 @@ function formatTime(timeStr) {
 
     return `${displayHours}:${minutes} ${ampm}`;
 }
+
+// ============ AUTO-EXPAND TEXTAREAS ============
+
+/**
+ * Auto-expand textarea to fit content
+ * @param {HTMLTextAreaElement} textarea - The textarea element
+ * @param {number} minHeight - Minimum height in pixels (default 72, ~3 lines)
+ * @param {number} maxHeight - Maximum height in pixels (default 400)
+ */
+function autoExpand(textarea, minHeight = 72, maxHeight = 400) {
+    if (!textarea) return;
+
+    // Reset height to recalculate
+    textarea.style.height = 'auto';
+
+    // Calculate new height
+    const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
+    textarea.style.height = newHeight + 'px';
+
+    // Toggle scrollable class based on whether content exceeds max
+    if (textarea.scrollHeight > maxHeight) {
+        textarea.classList.add('scrollable');
+    } else {
+        textarea.classList.remove('scrollable');
+    }
+}
+
+/**
+ * Initialize auto-expand behavior on a textarea
+ * @param {HTMLTextAreaElement} textarea - The textarea element
+ * @param {number} minHeight - Minimum height in pixels (default 72)
+ * @param {number} maxHeight - Maximum height in pixels (default 400)
+ */
+function initAutoExpand(textarea, minHeight = 72, maxHeight = 400) {
+    if (!textarea || textarea.dataset.autoExpandInit) return;
+
+    textarea.dataset.autoExpandInit = 'true';
+
+    // Add the auto-expand class if not already present
+    if (!textarea.classList.contains('auto-expand')) {
+        textarea.classList.add('auto-expand');
+    }
+
+    // Create bound resize function with the specified dimensions
+    const resize = () => autoExpand(textarea, minHeight, maxHeight);
+
+    // Listen for input events (typing, dictation, paste)
+    textarea.addEventListener('input', resize);
+
+    // Listen for change events (programmatic changes)
+    textarea.addEventListener('change', resize);
+
+    // On focus, expand to fit content
+    textarea.addEventListener('focus', resize);
+
+    // On blur, collapse to content size (remove empty space)
+    textarea.addEventListener('blur', () => {
+        // Small delay to ensure content is finalized
+        setTimeout(resize, 10);
+    });
+
+    // Initial sizing
+    resize();
+}
+
+/**
+ * Initialize auto-expand on all textareas with .auto-expand class
+ * @param {number} minHeight - Minimum height in pixels (default 72)
+ * @param {number} maxHeight - Maximum height in pixels (default 400)
+ */
+function initAllAutoExpandTextareas(minHeight = 72, maxHeight = 400) {
+    document.querySelectorAll('textarea.auto-expand').forEach(textarea => {
+        initAutoExpand(textarea, minHeight, maxHeight);
+    });
+}
