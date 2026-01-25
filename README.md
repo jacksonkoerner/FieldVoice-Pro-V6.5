@@ -906,6 +906,45 @@ npx serve .
 
 ---
 
+## Code Organization Guidelines
+
+### File Structure Convention
+
+- All shared JavaScript should go in `/js/` directory
+- HTML files should only contain page-specific logic
+- Shared utilities should be imported, not duplicated
+
+### Shared JS Files (Planned)
+
+The following are the canonical locations for shared code:
+
+| File | Purpose |
+|------|---------|
+| `/js/config.js` | Supabase credentials, constants, feature flags |
+| `/js/supabase-utils.js` | fromSupabase*, toSupabase* converters |
+| `/js/pwa-utils.js` | Service worker registration, offline banner, PWA navigation fix |
+| `/js/ui-utils.js` | escapeHtml(), generateId(), date formatting helpers |
+
+### Rules for Claude Code
+
+When working on this codebase, follow these rules:
+
+1. **Before adding a function to an HTML file**, check if it exists in `/js/`
+2. **If a function is needed in 2+ files**, it belongs in `/js/`
+3. **Never duplicate Supabase credentials** - import from config.js
+4. **Never duplicate fromSupabase/toSupabase converters** - import from supabase-utils.js
+
+### Migration Status
+
+| Module | Status | Files Still Using Inline |
+|--------|--------|--------------------------|
+| config.js | Not started | 12 files |
+| supabase-utils.js | Not started | 5 files |
+| pwa-utils.js | Not started | 8 files |
+| ui-utils.js | Not started | 4 files |
+
+---
+
 ## File Size Reference
 
 | File | Lines | Size (approx) |
