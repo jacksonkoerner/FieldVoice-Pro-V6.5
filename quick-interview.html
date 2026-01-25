@@ -891,73 +891,7 @@ Example: 'ABC Concrete had 5 workers pouring the foundation today. Weather was g
             console.log('[LOCAL] Draft cleared from localStorage');
         }
 
-        // ============ AUTO-EXPAND TEXTAREAS ============
-        /**
-         * Auto-expand a textarea to fit its content
-         * - Starts at reasonable height (3-4 lines via CSS min-height)
-         * - Grows to fit content up to max-height (400px)
-         * - Shows scrollbar only when content exceeds max-height
-         * - On blur, collapses to fit content (no empty space)
-         */
-        function autoExpand(textarea) {
-            if (!textarea) return;
-
-            const maxHeight = 400;
-            const minHeight = 72; // ~3 lines
-
-            // Reset height to recalculate
-            textarea.style.height = 'auto';
-
-            // Calculate new height
-            const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
-            textarea.style.height = newHeight + 'px';
-
-            // Toggle scrollable class based on whether content exceeds max
-            if (textarea.scrollHeight > maxHeight) {
-                textarea.classList.add('scrollable');
-            } else {
-                textarea.classList.remove('scrollable');
-            }
-        }
-
-        /**
-         * Initialize auto-expand behavior on a textarea
-         */
-        function initAutoExpand(textarea) {
-            if (!textarea || textarea.dataset.autoExpandInit) return;
-
-            textarea.dataset.autoExpandInit = 'true';
-
-            // Add the auto-expand class if not already present
-            if (!textarea.classList.contains('auto-expand')) {
-                textarea.classList.add('auto-expand');
-            }
-
-            // Listen for input events (typing, dictation, paste)
-            textarea.addEventListener('input', () => autoExpand(textarea));
-
-            // Listen for change events (programmatic changes)
-            textarea.addEventListener('change', () => autoExpand(textarea));
-
-            // On focus, expand to fit content
-            textarea.addEventListener('focus', () => autoExpand(textarea));
-
-            // On blur, collapse to content size (remove empty space)
-            textarea.addEventListener('blur', () => {
-                // Small delay to ensure content is finalized
-                setTimeout(() => autoExpand(textarea), 10);
-            });
-
-            // Initial sizing
-            autoExpand(textarea);
-        }
-
-        /**
-         * Initialize all textareas with auto-expand class
-         */
-        function initAllAutoExpandTextareas() {
-            document.querySelectorAll('textarea.auto-expand').forEach(initAutoExpand);
-        }
+        // autoExpand(), initAutoExpand(), initAllAutoExpandTextareas() moved to /js/ui-utils.js
 
         // ============ CAPTURE MODE HANDLING ============
         /**
@@ -1149,16 +1083,10 @@ Example: 'ABC Concrete had 5 workers pouring the foundation today. Weather was g
         }
 
         /**
-         * Auto-expand the field notes textarea
+         * Auto-expand the field notes textarea (uses shared autoExpand with page-specific dimensions)
          */
         function autoExpandFieldNotes(textarea) {
-            if (!textarea) return;
-            const minHeight = 200;
-            const maxHeight = window.innerHeight * 0.6;
-
-            textarea.style.height = 'auto';
-            const newHeight = Math.max(minHeight, Math.min(textarea.scrollHeight, maxHeight));
-            textarea.style.height = newHeight + 'px';
+            autoExpand(textarea, 200, Math.round(window.innerHeight * 0.6));
         }
 
         /**
@@ -3409,9 +3337,9 @@ Example: 'ABC Concrete had 5 workers pouring the foundation today. Weather was g
         }
 
         // Auto-expand caption textarea
+        // Auto-expand caption uses shared autoExpand with smaller max height
         function autoExpandCaption(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+            autoExpand(textarea, 40, 128);
         }
 
         // ============ RENDER SECTIONS ============
