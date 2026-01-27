@@ -12,6 +12,199 @@
         const isIOSSafari = isIOS && isSafari;
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+        // ============ ENTRY MANAGEMENT (v6) ============
+
+        /**
+         * Create a new entry
+         * @param {string} section - The section identifier (e.g., 'issues', 'safety', 'inspections')
+         * @param {string} content - The entry content
+         * @returns {Object} The created entry object
+         */
+        function createEntry(section, content) {
+            const entry = {
+                id: `entry_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                section: section,
+                content: content.trim(),
+                timestamp: new Date().toISOString(),
+                entry_order: getNextEntryOrder(section),
+                is_deleted: false
+            };
+
+            if (!report.entries) report.entries = [];
+            report.entries.push(entry);
+
+            // Queue for real-time backup
+            if (currentReportId) {
+                queueEntryBackup(currentReportId, entry);
+            }
+
+            saveReport();
+            return entry;
+        }
+
+        /**
+         * Get next entry order for a section
+         * @param {string} section - The section identifier
+         * @returns {number} The next order number
+         */
+        function getNextEntryOrder(section) {
+            if (!report.entries) return 1;
+            const sectionEntries = report.entries.filter(e => e.section === section && !e.is_deleted);
+            return sectionEntries.length + 1;
+        }
+
+        /**
+         * Get all entries for a section (not deleted)
+         * @param {string} section - The section identifier
+         * @returns {Array} Array of entry objects sorted by entry_order
+         */
+        function getEntriesForSection(section) {
+            if (!report.entries) return [];
+            return report.entries
+                .filter(e => e.section === section && !e.is_deleted)
+                .sort((a, b) => a.entry_order - b.entry_order);
+        }
+
+        /**
+         * Update an entry's content
+         * @param {string} entryId - The entry ID to update
+         * @param {string} newContent - The new content
+         * @returns {Object|null} The updated entry or null if not found
+         */
+        function updateEntry(entryId, newContent) {
+            const entry = report.entries?.find(e => e.id === entryId);
+            if (!entry) return null;
+
+            entry.content = newContent.trim();
+            entry.timestamp = new Date().toISOString();  // Update timestamp on edit
+
+            if (currentReportId) {
+                queueEntryBackup(currentReportId, entry);
+            }
+
+            saveReport();
+            return entry;
+        }
+
+        /**
+         * Delete an entry (soft delete)
+         * @param {string} entryId - The entry ID to delete
+         */
+        function deleteEntryById(entryId) {
+            const entry = report.entries?.find(e => e.id === entryId);
+            if (!entry) return;
+
+            entry.is_deleted = true;
+
+            if (currentReportId) {
+                deleteEntry(currentReportId, entryId);  // from sync-manager.js
+            }
+
+            saveReport();
+        }
+
+        // ============ TOGGLE STATE MANAGEMENT (v6) ============
+
+        /**
+         * Set a toggle state (locks immediately)
+         * @param {string} section - The section identifier
+         * @param {boolean} value - true = Yes, false = No
+         * @returns {boolean} Success status
+         */
+        function setToggleState(section, value) {
+            // Check if toggle can be changed using report-rules.js
+            if (currentReportId && typeof canChangeToggle === 'function') {
+                const canChange = canChangeToggle(currentReportId, section);
+                if (!canChange.allowed) {
+                    showToast(`Toggle locked: already set`, 'warning');
+                    return false;
+                }
+            }
+
+            if (!report.toggleStates) report.toggleStates = {};
+            report.toggleStates[section] = value;  // true = Yes, false = No
+
+            saveReport();
+            return true;
+        }
+
+        /**
+         * Get toggle state for a section
+         * @param {string} section - The section identifier
+         * @returns {boolean|null} Toggle state: true, false, or null if not set
+         */
+        function getToggleState(section) {
+            return report.toggleStates?.[section] ?? null;  // null = not set
+        }
+
+        /**
+         * Check if a toggle is locked
+         * @param {string} section - The section identifier
+         * @returns {boolean} True if toggle is locked
+         */
+        function isToggleLocked(section) {
+            return report.toggleStates?.[section] !== undefined && report.toggleStates?.[section] !== null;
+        }
+
+        /**
+         * Render a toggle button pair for a section
+         * @param {string} section - The section identifier
+         * @param {string} label - The display label
+         * @returns {string} HTML string for toggle buttons
+         */
+        function renderToggleButtons(section, label) {
+            const state = getToggleState(section);
+            const locked = isToggleLocked(section);
+
+            const yesClass = state === true
+                ? 'bg-safety-green text-white border-safety-green'
+                : 'bg-white text-slate-600 border-slate-300 hover:border-safety-green';
+            const noClass = state === false
+                ? 'bg-red-500 text-white border-red-500'
+                : 'bg-white text-slate-600 border-slate-300 hover:border-red-500';
+
+            const disabledAttr = locked ? 'disabled' : '';
+            const lockedIcon = locked ? '<i class="fas fa-lock text-xs ml-1"></i>' : '';
+
+            return `
+                <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 mb-3">
+                    <span class="text-sm font-medium text-slate-700">${label}</span>
+                    <div class="flex gap-2">
+                        <button
+                            onclick="handleToggle('${section}', true)"
+                            class="px-4 py-1.5 text-xs font-bold uppercase border-2 ${yesClass} transition-colors"
+                            ${disabledAttr}
+                        >Yes${state === true ? lockedIcon : ''}</button>
+                        <button
+                            onclick="handleToggle('${section}', false)"
+                            class="px-4 py-1.5 text-xs font-bold uppercase border-2 ${noClass} transition-colors"
+                            ${disabledAttr}
+                        >No${state === false ? lockedIcon : ''}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Handle toggle button click
+         * @param {string} section - The section identifier
+         * @param {boolean} value - The selected value
+         */
+        function handleToggle(section, value) {
+            if (isToggleLocked(section)) {
+                showToast('Toggle is locked after selection', 'warning');
+                return;
+            }
+
+            const success = setToggleState(section, value);
+            if (success) {
+                // Re-render the section to show locked state
+                renderSection(section);
+                updateAllPreviews();
+                updateProgress();
+            }
+        }
+
         // ============ STATE PROTECTION ============
         /**
          * Check if report is already refined - redirect if so
@@ -135,7 +328,11 @@
                     startTime: report.overview?.startTime,
                     completedBy: report.overview?.completedBy,
                     projectName: report.overview?.projectName
-                }
+                },
+
+                // v6: Entry-based notes and toggle states
+                entries: report.entries || [],
+                toggleStates: report.toggleStates || {}
             };
 
             try {
@@ -279,6 +476,14 @@
             // Restore overview
             if (localData.overview) {
                 report.overview = { ...report.overview, ...localData.overview };
+            }
+
+            // v6: Restore entries and toggleStates
+            if (localData.entries && Array.isArray(localData.entries)) {
+                report.entries = localData.entries;
+            }
+            if (localData.toggleStates) {
+                report.toggleStates = localData.toggleStates;
             }
 
             return true;
@@ -473,6 +678,10 @@
             const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
             document.getElementById('currentDate').textContent = dateStr;
 
+            // v6: Initialize v6 structures if not present
+            if (!report.entries) report.entries = [];
+            if (!report.toggleStates) report.toggleStates = {};
+
             renderAllSections();
             updateAllPreviews();
             updateProgress();
@@ -484,9 +693,15 @@
                 workSummaryInput.value = report.guidedNotes?.workSummary || '';
             }
 
-            // Safety checkboxes
-            document.getElementById('no-incidents').checked = report.safety?.noIncidents || false;
-            document.getElementById('has-incidents').checked = report.safety?.hasIncidents || false;
+            // Safety checkboxes - sync with toggle state if set
+            const safetyToggleVal = getToggleState('safety_incidents');
+            if (safetyToggleVal !== null) {
+                document.getElementById('no-incidents').checked = safetyToggleVal === false;
+                document.getElementById('has-incidents').checked = safetyToggleVal === true;
+            } else {
+                document.getElementById('no-incidents').checked = report.safety?.noIncidents || false;
+                document.getElementById('has-incidents').checked = report.safety?.hasIncidents || false;
+            }
 
             // Initialize auto-expand for all textareas
             initAllAutoExpandTextareas();
@@ -735,7 +950,11 @@
                 })),
 
                 reportDate: report.overview?.date || new Date().toLocaleDateString(),
-                inspectorName: report.overview?.completedBy || ''
+                inspectorName: report.overview?.completedBy || '',
+
+                // v6: Entry-based notes and toggle states
+                entries: report.entries || [],
+                toggleStates: report.toggleStates || {}
             };
         }
 
@@ -1976,7 +2195,9 @@
                 photos: [],
                 additionalNotes: "",
                 fieldNotes: { freeformNotes: "" },
-                guidedNotes: { workSummary: "" }
+                guidedNotes: { workSummary: "" },
+                entries: [],           // v6: entry-based notes
+                toggleStates: {}       // v6: locked toggle states (section -> true/false/null)
             };
         }
 
@@ -2349,10 +2570,26 @@
         function addIssue() {
             const input = document.getElementById('issue-input');
             const text = input.value.trim();
-            if (text) { report.generalIssues.push(text); saveReport(); renderSection('issues'); input.value = ''; }
+            if (text) {
+                // v6: Use entry-based notes
+                createEntry('issues', text);
+                renderSection('issues');
+                input.value = '';
+                updateAllPreviews();
+                updateProgress();
+            }
         }
 
-        function removeIssue(index) { report.generalIssues.splice(index, 1); saveReport(); renderSection('issues'); }
+        function removeIssue(index) {
+            // Legacy function for backward compatibility with old array-based issues
+            if (report.generalIssues && report.generalIssues[index] !== undefined) {
+                report.generalIssues.splice(index, 1);
+                saveReport();
+                renderSection('issues');
+                updateAllPreviews();
+                updateProgress();
+            }
+        }
 
         function addInspection() {
             const input = document.getElementById('inspection-input');
@@ -2365,10 +2602,26 @@
         function addSafetyNote() {
             const input = document.getElementById('safety-input');
             const text = input.value.trim();
-            if (text) { report.safety.notes.push(text); saveReport(); renderSection('safety'); input.value = ''; }
+            if (text) {
+                // v6: Use entry-based notes
+                createEntry('safety', text);
+                renderSection('safety');
+                input.value = '';
+                updateAllPreviews();
+                updateProgress();
+            }
         }
 
-        function removeSafetyNote(index) { report.safety.notes.splice(index, 1); saveReport(); renderSection('safety'); }
+        function removeSafetyNote(index) {
+            // Legacy function for backward compatibility with old array-based notes
+            if (report.safety?.notes && report.safety.notes[index] !== undefined) {
+                report.safety.notes.splice(index, 1);
+                saveReport();
+                renderSection('safety');
+                updateAllPreviews();
+                updateProgress();
+            }
+        }
 
         // Note: addVisitor() and removeVisitor() are replaced by text area inputs
         // contractorCommunications and visitorsRemarks are now strings, not arrays
@@ -2553,13 +2806,41 @@
                     renderPersonnelCards();
                     break;
                 case 'issues':
-                    document.getElementById('issues-list').innerHTML = report.generalIssues.map((issue, i) => `
-                        <div class="bg-red-50 border border-red-200 p-3 flex items-start gap-3">
-                            <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
-                            <p class="flex-1 text-sm text-slate-700">${issue}</p>
-                            <button onclick="removeIssue(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash text-xs"></i></button>
-                        </div>
-                    `).join('') || '';
+                    // v6: Use entry-based notes
+                    const issueEntries = getEntriesForSection('issues');
+                    // Also check legacy generalIssues array for backward compatibility
+                    const legacyIssues = report.generalIssues || [];
+
+                    let issuesHtml = '';
+
+                    // Render entry-based issues first
+                    if (issueEntries.length > 0) {
+                        issuesHtml += issueEntries.map(entry => `
+                            <div class="bg-red-50 border border-red-200 p-3 flex items-start gap-3" data-entry-id="${entry.id}">
+                                <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm text-slate-700">${escapeHtml(entry.content)}</p>
+                                    <p class="text-[10px] text-slate-400 mt-1">${new Date(entry.timestamp).toLocaleTimeString()}</p>
+                                </div>
+                                <button onclick="deleteEntryById('${entry.id}'); renderSection('issues'); updateAllPreviews(); updateProgress();" class="text-red-400 hover:text-red-600">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Also render legacy issues (for backward compatibility)
+                    if (legacyIssues.length > 0) {
+                        issuesHtml += legacyIssues.map((issue, i) => `
+                            <div class="bg-red-50 border border-red-200 p-3 flex items-start gap-3">
+                                <i class="fas fa-exclamation-circle text-red-500 mt-0.5"></i>
+                                <p class="flex-1 text-sm text-slate-700">${escapeHtml(issue)}</p>
+                                <button onclick="removeIssue(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
+                        `).join('');
+                    }
+
+                    document.getElementById('issues-list').innerHTML = issuesHtml;
                     break;
                 case 'inspections':
                     document.getElementById('inspections-list').innerHTML = report.qaqcNotes.map((note, i) => `
@@ -2571,14 +2852,54 @@
                     `).join('') || '';
                     break;
                 case 'safety':
-                    document.getElementById('safety-list').innerHTML = report.safety.notes.map((note, i) => `
-                        <div class="bg-green-50 border border-green-200 p-3 flex items-start gap-3">
-                            <i class="fas fa-shield-alt text-safety-green mt-0.5"></i>
-                            <p class="flex-1 text-sm text-slate-700">${note}</p>
-                            <button onclick="removeSafetyNote(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash text-xs"></i></button>
-                        </div>
-                    `).join('') || '';
-                    document.getElementById('has-incidents').checked = report.safety.hasIncidents;
+                    // v6: Render toggle for incidents first
+                    const safetyToggle = renderToggleButtons('safety_incidents', 'Any safety incidents today?');
+
+                    // v6: Use entry-based notes
+                    const safetyEntries = getEntriesForSection('safety');
+                    // Also check legacy safety.notes array for backward compatibility
+                    const legacySafetyNotes = report.safety?.notes || [];
+
+                    let safetyEntriesHtml = '';
+
+                    // Render entry-based safety notes
+                    if (safetyEntries.length > 0) {
+                        safetyEntriesHtml += safetyEntries.map(entry => `
+                            <div class="bg-green-50 border border-green-200 p-3 flex items-start gap-3" data-entry-id="${entry.id}">
+                                <i class="fas fa-shield-alt text-safety-green mt-0.5"></i>
+                                <div class="flex-1">
+                                    <p class="text-sm text-slate-700">${escapeHtml(entry.content)}</p>
+                                    <p class="text-[10px] text-slate-400 mt-1">${new Date(entry.timestamp).toLocaleTimeString()}</p>
+                                </div>
+                                <button onclick="deleteEntryById('${entry.id}'); renderSection('safety'); updateAllPreviews(); updateProgress();" class="text-red-400 hover:text-red-600">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        `).join('');
+                    }
+
+                    // Also render legacy safety notes (for backward compatibility)
+                    if (legacySafetyNotes.length > 0) {
+                        safetyEntriesHtml += legacySafetyNotes.map((note, i) => `
+                            <div class="bg-green-50 border border-green-200 p-3 flex items-start gap-3">
+                                <i class="fas fa-shield-alt text-safety-green mt-0.5"></i>
+                                <p class="flex-1 text-sm text-slate-700">${escapeHtml(note)}</p>
+                                <button onclick="removeSafetyNote(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-trash text-xs"></i></button>
+                            </div>
+                        `).join('');
+                    }
+
+                    document.getElementById('safety-list').innerHTML = safetyToggle + safetyEntriesHtml;
+
+                    // Sync legacy checkboxes with toggle state
+                    const safetyToggleState = getToggleState('safety_incidents');
+                    if (safetyToggleState !== null) {
+                        document.getElementById('has-incidents').checked = safetyToggleState === true;
+                        document.getElementById('no-incidents').checked = safetyToggleState === false;
+                    } else {
+                        document.getElementById('has-incidents').checked = report.safety.hasIncidents;
+                        document.getElementById('no-incidents').checked = report.safety.noIncidents;
+                    }
                     break;
                 case 'communications':
                     // Communications text area - value set via event listener
@@ -2650,8 +2971,28 @@
             }
 
             const naMarked = report.meta.naMarked || {};
-            document.getElementById('issues-preview').textContent = naMarked.issues ? 'N/A - No issues' : report.generalIssues.length > 0 ? `${report.generalIssues.length} issues` : 'None reported';
-            document.getElementById('safety-preview').textContent = report.safety.hasIncidents ? 'INCIDENT REPORTED' : report.safety.noIncidents ? 'No incidents (confirmed)' : report.safety.notes.length > 0 ? 'Notes added' : 'Tap to confirm';
+
+            // v6: Issues preview - count both entry-based and legacy issues
+            const issueEntries = getEntriesForSection('issues');
+            const legacyIssueCount = (report.generalIssues || []).length;
+            const totalIssues = issueEntries.length + legacyIssueCount;
+            document.getElementById('issues-preview').textContent =
+                naMarked.issues ? 'N/A - No issues' :
+                totalIssues > 0 ? `${totalIssues} issue${totalIssues > 1 ? 's' : ''}` :
+                'None reported';
+
+            // v6: Safety preview - check toggle state first, then entries
+            const safetyToggleVal = getToggleState('safety_incidents');
+            const safetyEntryCount = getEntriesForSection('safety').length;
+            const legacySafetyCount = (report.safety?.notes || []).length;
+            document.getElementById('safety-preview').textContent =
+                safetyToggleVal === false ? 'No incidents (confirmed)' :
+                safetyToggleVal === true ? 'INCIDENT REPORTED' :
+                report.safety.hasIncidents ? 'INCIDENT REPORTED' :
+                report.safety.noIncidents ? 'No incidents (confirmed)' :
+                (safetyEntryCount + legacySafetyCount) > 0 ? 'Notes added' :
+                'Tap to confirm';
+
             document.getElementById('photos-preview').textContent = naMarked.photos ? 'N/A - No photos' : report.photos.length > 0 ? `${report.photos.length} photos` : 'No photos';
 
             updateStatusIcons();
@@ -2699,11 +3040,20 @@
             // Work Summary - has work summary text (simplified single textarea)
             if (report.guidedNotes?.workSummary?.trim()) filled++;
 
-            // Issues - has issues OR marked N/A
-            if (report.generalIssues.length > 0 || naMarked.issues) filled++;
+            // v6: Issues - has entries OR legacy issues OR marked N/A
+            const issueEntryCount = getEntriesForSection('issues').length;
+            const legacyIssueCount = (report.generalIssues || []).length;
+            if (issueEntryCount > 0 || legacyIssueCount > 0 || naMarked.issues) filled++;
 
-            // Safety - confirmed no incidents OR has incidents OR has notes
-            if (report.safety.noIncidents === true || report.safety.hasIncidents === true || report.safety.notes.length > 0) filled++;
+            // v6: Safety - toggle answered OR has entries OR legacy notes
+            const safetyToggleVal = getToggleState('safety_incidents');
+            const safetyEntryCount = getEntriesForSection('safety').length;
+            const legacySafetyCount = (report.safety?.notes || []).length;
+            if (safetyToggleVal !== null ||
+                report.safety.noIncidents === true ||
+                report.safety.hasIncidents === true ||
+                safetyEntryCount > 0 ||
+                legacySafetyCount > 0) filled++;
 
             // Photos - has photos OR marked N/A
             if (report.photos.length > 0 || naMarked.photos) filled++;
