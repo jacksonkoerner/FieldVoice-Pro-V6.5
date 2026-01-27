@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
   SYNC_QUEUE: 'fvp_sync_queue',
   LAST_SYNC: 'fvp_last_sync',
   DEVICE_ID: 'fvp_device_id',
+  USER_ID: 'fvp_user_id',
   OFFLINE_QUEUE: 'fvp_offline_queue',
   MIC_GRANTED: 'fvp_mic_granted',
   MIC_TIMESTAMP: 'fvp_mic_timestamp',
