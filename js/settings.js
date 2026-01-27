@@ -7,6 +7,21 @@ let currentProfileId = null;
 
 // ============ PROFILE MANAGEMENT ============
 async function loadSettings() {
+    // Step 1: Load from localStorage first (local-first)
+    const localProfile = getStorageItem(STORAGE_KEYS.USER_PROFILE);
+
+    if (localProfile) {
+        currentProfileId = localProfile.id || null;
+        document.getElementById('inspectorName').value = localProfile.fullName || '';
+        document.getElementById('title').value = localProfile.title || '';
+        document.getElementById('company').value = localProfile.company || '';
+        document.getElementById('email').value = localProfile.email || '';
+        document.getElementById('phone').value = localProfile.phone || '';
+    }
+
+    updateSignaturePreview();
+
+    // Step 2: Try to fetch from Supabase to sync any cloud changes
     try {
         const { data, error } = await supabaseClient
             .from('user_profiles')
@@ -16,70 +31,96 @@ async function loadSettings() {
 
         if (error && error.code !== 'PGRST116') {
             // PGRST116 = no rows returned, which is fine for new users
-            console.error('Failed to load settings:', error);
-            showToast('Failed to load profile', 'error');
-        }
-
-        if (data) {
-            currentProfileId = data.id;
-            document.getElementById('inspectorName').value = data.full_name || '';
-            document.getElementById('title').value = data.title || '';
-            document.getElementById('company').value = data.company || '';
-            document.getElementById('email').value = data.email || '';
-            document.getElementById('phone').value = data.phone || '';
-        }
-    } catch (e) {
-        console.error('Failed to load settings:', e);
-        showToast('Failed to load profile', 'error');
-    }
-    updateSignaturePreview();
-}
-
-async function saveSettings() {
-    const profileData = {
-        full_name: document.getElementById('inspectorName').value.trim(),
-        title: document.getElementById('title').value.trim(),
-        company: document.getElementById('company').value.trim(),
-        email: document.getElementById('email').value.trim() || null,
-        phone: document.getElementById('phone').value.trim() || null,
-        updated_at: new Date().toISOString()
-    };
-
-    try {
-        let result;
-        if (currentProfileId) {
-            // Update existing profile
-            result = await supabaseClient
-                .from('user_profiles')
-                .update(profileData)
-                .eq('id', currentProfileId)
-                .select()
-                .single();
-        } else {
-            // Insert new profile
-            result = await supabaseClient
-                .from('user_profiles')
-                .insert(profileData)
-                .select()
-                .single();
-        }
-
-        if (result.error) {
-            console.error('Failed to save settings:', result.error);
-            showToast('Failed to save profile', 'error');
+            console.error('Failed to load settings from Supabase:', error);
+            // Don't show error toast - we already have local data
             return;
         }
 
-        // Store the profile ID for future updates
-        if (result.data) {
-            currentProfileId = result.data.id;
+        if (data) {
+            // Convert to JS format
+            const cloudProfile = fromSupabaseUserProfile(data);
+
+            // Check if cloud data is newer than local data
+            const cloudUpdatedAt = cloudProfile.updatedAt ? new Date(cloudProfile.updatedAt).getTime() : 0;
+            const localUpdatedAt = localProfile?.updatedAt ? new Date(localProfile.updatedAt).getTime() : 0;
+
+            if (cloudUpdatedAt > localUpdatedAt) {
+                // Cloud data is newer - update form and localStorage
+                currentProfileId = cloudProfile.id;
+                document.getElementById('inspectorName').value = cloudProfile.fullName || '';
+                document.getElementById('title').value = cloudProfile.title || '';
+                document.getElementById('company').value = cloudProfile.company || '';
+                document.getElementById('email').value = cloudProfile.email || '';
+                document.getElementById('phone').value = cloudProfile.phone || '';
+
+                // Update localStorage with cloud data
+                setStorageItem(STORAGE_KEYS.USER_PROFILE, cloudProfile);
+
+                // Also store the user_id for use by other pages
+                if (cloudProfile.id) {
+                    setStorageItem(STORAGE_KEYS.USER_ID, cloudProfile.id);
+                }
+
+                updateSignaturePreview();
+            }
+        }
+    } catch (e) {
+        console.error('Failed to sync settings from Supabase:', e);
+        // Don't show error - we already have local data
+    }
+}
+
+async function saveSettings() {
+    // Step 1: Get device_id (generates if not exists)
+    const deviceId = getDeviceId();
+
+    // Step 2: Get or generate user_id
+    let userId = getStorageItem(STORAGE_KEYS.USER_ID);
+    if (!userId) {
+        userId = currentProfileId || crypto.randomUUID();
+    }
+
+    // Step 3: Build profile object with all fields
+    const profile = {
+        id: userId,
+        deviceId: deviceId,
+        fullName: document.getElementById('inspectorName').value.trim(),
+        title: document.getElementById('title').value.trim(),
+        company: document.getElementById('company').value.trim(),
+        email: document.getElementById('email').value.trim() || '',
+        phone: document.getElementById('phone').value.trim() || '',
+        updatedAt: new Date().toISOString()
+    };
+
+    // Step 4: Save to localStorage first (local-first)
+    setStorageItem(STORAGE_KEYS.USER_PROFILE, profile);
+
+    // Step 5: Store user_id in localStorage for use by other pages
+    setStorageItem(STORAGE_KEYS.USER_ID, userId);
+    currentProfileId = userId;
+
+    updateSignaturePreview();
+
+    // Step 6: Try to upsert to Supabase
+    try {
+        const supabaseData = toSupabaseUserProfile(profile);
+
+        const { error } = await supabaseClient
+            .from('user_profiles')
+            .upsert(supabaseData, { onConflict: 'id' });
+
+        if (error) {
+            console.error('Failed to save settings to Supabase:', error);
+            showToast('Saved locally. Save again when online to backup.', 'warning');
+            return;
         }
 
-        showToast('Profile saved successfully');
-        updateSignaturePreview();
+        // Step 7: Success - show confirmation
+        showToast('Profile saved');
     } catch (e) {
-        console.error('Failed to save settings:', e);
-        showToast('Failed to save profile', 'error');
+        console.error('Failed to save settings to Supabase:', e);
+        // Step 8: Offline or error - inform user
+        showToast('Saved locally. Save again when online to backup.', 'warning');
     }
 }
 

@@ -64,6 +64,13 @@ async function saveProjectToSupabase(project) {
     try {
         // 1. Upsert the project
         const projectData = toSupabaseProject(project);
+
+        // Add user_id from localStorage
+        const userId = getStorageItem(STORAGE_KEYS.USER_ID);
+        if (userId) {
+            projectData.user_id = userId;
+        }
+
         const { error: projectError } = await supabaseClient
             .from('projects')
             .upsert(projectData, { onConflict: 'id' });

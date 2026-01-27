@@ -580,6 +580,53 @@ function toSupabasePhoto(photo, reportId) {
 }
 
 // ============================================================================
+// USER PROFILE CONVERTERS
+// ============================================================================
+
+/**
+ * Convert Supabase user_profiles row to JS format
+ *
+ * DB columns: id, device_id, full_name, title, company, email, phone, created_at, updated_at
+ */
+function fromSupabaseUserProfile(row) {
+    if (!row) return null;
+    return {
+        id: row.id,
+        deviceId: row.device_id || null,
+        fullName: row.full_name || '',
+        title: row.title || '',
+        company: row.company || '',
+        email: row.email || '',
+        phone: row.phone || '',
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    };
+}
+
+/**
+ * Convert JS user profile to Supabase format
+ */
+function toSupabaseUserProfile(profile) {
+    if (!profile) return null;
+    const row = {
+        device_id: profile.deviceId || null,
+        full_name: profile.fullName || '',
+        title: profile.title || '',
+        company: profile.company || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        updated_at: new Date().toISOString()
+    };
+
+    // Include id for upserts
+    if (profile.id) {
+        row.id = profile.id;
+    }
+
+    return row;
+}
+
+// ============================================================================
 // EQUIPMENT CONVERTERS
 // ============================================================================
 
@@ -642,3 +689,5 @@ window.fromSupabasePhoto = fromSupabasePhoto;
 window.toSupabasePhoto = toSupabasePhoto;
 window.fromSupabaseEquipment = fromSupabaseEquipment;
 window.toSupabaseEquipment = toSupabaseEquipment;
+window.fromSupabaseUserProfile = fromSupabaseUserProfile;
+window.toSupabaseUserProfile = toSupabaseUserProfile;
