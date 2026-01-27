@@ -184,3 +184,18 @@ CREATE POLICY "Allow all access to report_raw_capture" ON report_raw_capture FOR
 CREATE POLICY "Allow all access to ai_responses" ON ai_responses FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access to final_reports" ON final_reports FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access to photos" ON photos FOR ALL USING (true) WITH CHECK (true);
+
+-- TABLE 10: user_profiles (Inspector/User settings)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT,
+  title TEXT,
+  company TEXT,
+  email TEXT,
+  phone TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all access to user_profiles" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
