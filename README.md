@@ -190,7 +190,7 @@ initPWA(); // Registers service worker and sets up offline banner
 - `location`, `engineer`, `prime_contractor`
 - `notice_to_proceed` (date), `contract_duration` (int), `weather_days` (int)
 - `expected_completion` (date), `default_start_time`, `default_end_time`
-- `logo` (bytea), `status` ("active"/"archived")
+- `logo` (bytea), `logo_thumbnail` (text), `logo_url` (text), `status` ("active"/"archived")
 - `created_at`, `updated_at`
 
 **reports**
