@@ -137,6 +137,9 @@ async function uploadLogoToStorage(file, projectId) {
             return null;
         }
 
+        // Debug: Log client details for troubleshooting
+        console.log('[LOGO] Using client:', typeof supabaseClient, supabaseClient?.supabaseUrl);
+
         // Get file extension
         const ext = file.name.split('.').pop().toLowerCase() || 'png';
         const filePath = `${projectId}.${ext}`;
