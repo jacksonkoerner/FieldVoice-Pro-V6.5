@@ -282,6 +282,67 @@ async function executeRefresh() {
     }
 }
 
+// ============ NUCLEAR RESET ============
+async function resetAllData() {
+    // Show confirmation dialog
+    const confirmed = confirm(
+        'This will delete ALL local data including your profile, projects, and drafts. This cannot be undone. Continue?'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    console.log('[Nuclear Reset] Starting complete data reset...');
+
+    // Update button to show resetting state
+    const resetBtn = document.getElementById('reset-all-btn');
+    if (resetBtn) {
+        resetBtn.disabled = true;
+        resetBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Resetting...';
+    }
+
+    try {
+        // Step 1: Clear localStorage
+        console.log('[Nuclear Reset] Clearing localStorage...');
+        localStorage.clear();
+
+        // Step 2: Clear sessionStorage
+        console.log('[Nuclear Reset] Clearing sessionStorage...');
+        sessionStorage.clear();
+
+        // Step 3: Delete IndexedDB database
+        console.log('[Nuclear Reset] Deleting IndexedDB database...');
+        indexedDB.deleteDatabase('fieldvoice-pro');
+
+        // Step 4: Delete all caches
+        if ('caches' in window) {
+            console.log('[Nuclear Reset] Deleting all caches...');
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+            console.log('[Nuclear Reset] Deleted caches:', cacheNames);
+        }
+
+        // Step 5: Unregister all service workers
+        if ('serviceWorker' in navigator) {
+            console.log('[Nuclear Reset] Unregistering service workers...');
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(reg => reg.unregister()));
+            console.log('[Nuclear Reset] Unregistered service workers:', registrations.length);
+        }
+
+        console.log('[Nuclear Reset] All local data cleared. Redirecting to index...');
+
+        // Hard reload to index.html
+        window.location.href = '/index.html';
+
+    } catch (error) {
+        console.error('[Nuclear Reset] Error during reset:', error);
+        // Even if some steps fail, try to redirect
+        window.location.href = '/index.html';
+    }
+}
+
 // ============ INIT ============
 document.addEventListener('DOMContentLoaded', () => {
     // Update preview on input change
@@ -298,3 +359,4 @@ window.saveSettings = saveSettings;
 window.refreshApp = refreshApp;
 window.hideRefreshModal = hideRefreshModal;
 window.executeRefresh = executeRefresh;
+window.resetAllData = resetAllData;
