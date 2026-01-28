@@ -14,6 +14,7 @@
 | pwa-utils.js | Offline/PWA features | (standalone) |
 | ui-utils.js | UI helpers | (standalone) |
 | media-utils.js | Photo/GPS utilities | (standalone) |
+| indexeddb-utils.js | IndexedDB operations | (standalone) |
 | project-config.js | Project config page logic | All shared modules |
 | sw.js | Service worker | (loaded by pwa-utils.js) |
 
@@ -211,9 +212,12 @@ initPWA({ skipServiceWorker: true });         // Skip SW registration
 - `readFileAsDataURL(file)` - Read file as base64
 - `dataURLtoBlob(dataURL)` - Convert data URL to Blob
 - `compressImage(dataUrl, maxWidth, quality)` - Compress image
+- `compressImageToThumbnail(dataUrl, maxWidth, quality)` - Compress image to thumbnail size
+- `uploadLogoToStorage(projectId, imageDataUrl)` - Upload logo to Supabase storage
+- `deleteLogoFromStorage(projectId)` - Delete logo from Supabase storage
 - `getHighAccuracyGPS(onWeakSignal)` - Get GPS coordinates
 
-**Used by:** quick-interview.html
+**Used by:** quick-interview.html, project-config.html
 
 **Import:**
 ```html
