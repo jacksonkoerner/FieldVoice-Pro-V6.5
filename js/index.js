@@ -16,9 +16,51 @@ let activeProjectCache = null;
 // ============ PROJECT MANAGEMENT ============
 async function loadProjects() {
     try {
+        // Get current user's ID
+        const userId = getStorageItem(STORAGE_KEYS.USER_ID);
+
+        if (!userId) {
+            console.warn('[loadProjects] No user_id found - user needs to set up profile first');
+            projectsCache = [];
+            return [];
+        }
+
+        // LOCAL-FIRST: Try IndexedDB first
+        let localProjects = [];
+        try {
+            await window.idb.initDB();
+            const allLocalProjects = await window.idb.getAllProjects();
+            // Filter by user_id
+            localProjects = allLocalProjects.filter(p => p.user_id === userId);
+            // Sort by project_name ascending
+            localProjects.sort((a, b) => {
+                const nameA = (a.projectName || a.name || '').toLowerCase();
+                const nameB = (b.projectName || b.name || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+        } catch (idbError) {
+            console.warn('[loadProjects] IndexedDB error:', idbError);
+        }
+
+        // If we have local projects, use them
+        if (localProjects.length > 0) {
+            console.log('[loadProjects] Returning', localProjects.length, 'projects from IndexedDB');
+            projectsCache = localProjects;
+
+            // Also cache to localStorage for offline access and report-rules.js
+            const projectsMap = {};
+            projectsCache.forEach(p => { projectsMap[p.id] = p; });
+            setStorageItem(STORAGE_KEYS.PROJECTS, projectsMap);
+
+            return projectsCache;
+        }
+
+        // Fall back to Supabase if IndexedDB is empty
+        console.log('[loadProjects] IndexedDB empty, fetching from Supabase...');
         const { data, error } = await supabaseClient
             .from('projects')
             .select('*')
+            .eq('user_id', userId)
             .order('project_name', { ascending: true });
 
         if (error) {
@@ -28,7 +70,17 @@ async function loadProjects() {
 
         projectsCache = data.map(fromSupabaseProject);
 
-        // Also cache projects in localStorage for offline access and report-rules.js
+        // Cache projects to IndexedDB for future offline use
+        console.log('[loadProjects] Caching', projectsCache.length, 'projects to IndexedDB');
+        for (const project of projectsCache) {
+            try {
+                await window.idb.saveProject(project);
+            } catch (cacheError) {
+                console.warn('[loadProjects] Failed to cache project:', project.id, cacheError);
+            }
+        }
+
+        // Also cache to localStorage for offline access and report-rules.js
         const projectsMap = {};
         projectsCache.forEach(p => { projectsMap[p.id] = p; });
         setStorageItem(STORAGE_KEYS.PROJECTS, projectsMap);
@@ -36,7 +88,7 @@ async function loadProjects() {
         console.log('[SUPABASE] Loaded projects:', projectsCache.length);
         return projectsCache;
     } catch (e) {
-        console.error('[SUPABASE] Failed to load projects:', e);
+        console.error('[loadProjects] Failed to load projects:', e);
         return [];
     }
 }
@@ -53,6 +105,26 @@ async function loadActiveProject() {
     }
 
     try {
+        // LOCAL-FIRST: Try IndexedDB first
+        let project = null;
+        try {
+            await window.idb.initDB();
+            project = await window.idb.getProject(activeId);
+            if (project) {
+                console.log('[loadActiveProject] Found in IndexedDB:', activeId);
+            }
+        } catch (idbError) {
+            console.warn('[loadActiveProject] IndexedDB error:', idbError);
+        }
+
+        // If found in IndexedDB, use it
+        if (project) {
+            activeProjectCache = project;
+            return activeProjectCache;
+        }
+
+        // Fall back to Supabase
+        console.log('[loadActiveProject] Not in IndexedDB, fetching from Supabase...');
         const { data, error } = await supabaseClient
             .from('projects')
             .select('*')
@@ -66,10 +138,18 @@ async function loadActiveProject() {
         }
 
         activeProjectCache = fromSupabaseProject(data);
+
+        // Cache to IndexedDB for future offline use
+        try {
+            await window.idb.saveProject(activeProjectCache);
+        } catch (cacheError) {
+            console.warn('[loadActiveProject] Failed to cache project:', cacheError);
+        }
+
         console.log('[SUPABASE] Loaded active project:', activeProjectCache.name);
         return activeProjectCache;
     } catch (e) {
-        console.error('[SUPABASE] Failed to load active project:', e);
+        console.error('[loadActiveProject] Failed to load active project:', e);
         activeProjectCache = null;
         return null;
     }
